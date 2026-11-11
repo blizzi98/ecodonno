@@ -1,0 +1,2180 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoDonno - Regala e Cerca</title>
+    
+    <!-- INTEGRAZIONE GOOGLE ADSENSE -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4393188346294399" crossorigin="anonymous"></script>
+
+    <!-- Includiamo Tailwind CSS per la grafica pulita e moderna -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Includiamo la libreria ufficiale di Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans flex flex-col min-h-screen relative">
+
+    <!-- Contenitore Notifiche Toast (In alto a destra) -->
+    <div id="toast-container" class="fixed top-20 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Navbar principale -->
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-emerald-600 cursor-pointer flex items-center gap-2" onclick="tornaAllaBacheca()">EcoDonno 🌱</h1>
+            
+            <div class="flex items-center gap-4" id="navbar-menu">
+                <button onclick="apriFormInserimento()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition">+ Pubblica Annuncio</button>
+                <div id="auth-menu-container" class="flex items-center gap-2"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenuto Principale -->
+    <main class="max-w-6xl mx-auto px-4 py-8 flex-grow w-full">
+        
+        <!-- Sezione Bacheca & Ricerca -->
+        <div id="sezione-principale">
+            <div class="bg-gradient-to-br from-emerald-50 via-teal-50 to-white rounded-3xl shadow-sm p-8 text-center mb-8 border border-emerald-100">
+                <h2 class="text-3xl font-extrabold text-slate-900 mb-2">Dai una seconda vita alle cose</h2>
+                <p class="text-slate-600 mb-6 max-w-xl mx-auto">Regala ciò che non usi più o trova quello di cui hai bisogno in modo completamente gratuito, vicino a te.</p>
+                
+                <!-- Barra di Ricerca Principale -->
+                <div id="box-ricerca-principale" class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-center max-w-4xl mx-auto">
+                    
+                    <div class="flex-grow w-full md:w-auto">
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 text-left">Cosa cerchi?</label>
+                        <input type="text" id="input-ricerca-testo" placeholder="Cerca oggetto..." class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm w-full bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+
+                    <div class="w-full md:w-48">
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 text-left">Categoria</label>
+                        <select id="filtro-categoria" class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm w-full bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="">Tutte le categorie</option>
+                            <option value="Arredamento">Arredamento & Casa</option>
+                            <option value="Elettronica">Elettronica & Elettrodomestici</option>
+                            <option value="Abbigliamento">Abbigliamento & Accessori</option>
+                            <option value="Libri">Libri, Film & Musica</option>
+                            <option value="Bambini">Bambini & Giocattoli</option>
+                            <option value="Sport">Sport & Tempo libero</option>
+                            <option value="Altro">Altro</option>
+                        </select>
+                    </div>
+
+                    <div class="w-full md:w-48">
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 text-left">Tipo di annuncio</label>
+                        <select id="filtro-tipo-ricerca" class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm w-full bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="tutti">Tutti i tipi</option>
+                            <option value="regalo">In Regalo</option>
+                            <option value="cercato">Sto cercando</option>
+                        </select>
+                    </div>
+
+                    <div class="w-full md:w-48 relative">
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 text-left">Dove (Italia)</label>
+                        <input type="text" id="input-zona" placeholder="Città o regione..." autocomplete="off" oninput="cercaSuggerimentiZona(this.value, 'lista-suggerimenti-ricerca')" class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm w-full bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <div id="lista-suggerimenti-ricerca" class="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 hidden max-h-56 overflow-y-auto text-left text-sm"></div>
+                    </div>
+
+                    <div class="w-full md:w-auto self-end mt-1 md:mt-0">
+                        <button onclick="limiteAnnunci = 20; caricaAnnunci();" class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-emerald-700 transition w-full md:w-auto flex items-center justify-center gap-2">
+                            🔍 Cerca
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sezione Inserimento / Modifica Annuncio -->
+            <div id="form-box" class="bg-white rounded-3xl shadow-sm p-8 mb-8 hidden border border-slate-200 max-w-3xl mx-auto">
+                <h3 class="text-2xl font-extrabold text-slate-900 mb-6" id="form-titolo-box">Pubblica un nuovo oggetto</h3>
+                <input type="hidden" id="edit-annuncio-id" value="">
+                
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Titolo dell'annuncio *</label>
+                        <input type="text" id="nuovo-titolo" placeholder="Es. Divano 3 posti in ottime condizioni" class="border border-slate-300 rounded-xl px-4 py-3 text-sm w-full bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Descrizione</label>
+                        <textarea id="nuovo-desc" placeholder="Descrivi l'oggetto, le condizioni e le modalità di ritiro..." class="border border-slate-300 rounded-xl px-4 py-3 text-sm w-full h-32 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"></textarea>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Tipo</label>
+                            <select id="nuovo-tipo" class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm bg-slate-50 focus:bg-white w-full">
+                                <option value="regalo">In Regalo</option>
+                                <option value="cercato">Cercato</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Categoria</label>
+                            <select id="nuovo-categoria" class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm bg-slate-50 focus:bg-white w-full">
+                                <option value="Arredamento">Arredamento & Casa</option>
+                                <option value="Elettronica">Elettronica & Elettrodomestici</option>
+                                <option value="Abbigliamento">Abbigliamento & Accessori</option>
+                                <option value="Libri">Libri, Film & Musica</option>
+                                <option value="Bambini">Bambini & Giocattoli</option>
+                                <option value="Sport">Sport & Tempo libero</option>
+                                <option value="Altro">Altro</option>
+                            </select>
+                        </div>
+                        <div class="relative">
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Zona / Città *</label>
+                            <input type="text" id="nuovo-zona" placeholder="Es. Gorizia" autocomplete="off" oninput="cercaSuggerimentiZona(this.value, 'lista-suggerimenti-form')" class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm w-full bg-slate-50 focus:bg-white">
+                            <div id="lista-suggerimenti-form" class="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 hidden max-h-56 overflow-y-auto text-left text-sm"></div>
+                        </div>
+                    </div>
+
+                    <!-- Box Contatti Ordinato -->
+                    <div class="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100 space-y-4">
+                        <h4 class="text-xs font-extrabold text-emerald-800 uppercase tracking-wider">📞 Opzioni di Contatto per questo annuncio</h4>
+                        
+                        <div class="flex items-center gap-3 bg-white p-3 rounded-xl border border-emerald-100 shadow-sm">
+                            <input type="checkbox" id="check-chat" checked class="w-4 h-4 text-emerald-600 rounded">
+                            <label for="check-chat" class="text-sm font-medium text-slate-800">Chat privata sul sito (Consigliato)</label>
+                        </div>
+
+                        <div class="flex items-center gap-3 bg-white p-3 rounded-xl border border-emerald-100 shadow-sm">
+                            <input type="checkbox" id="check-whatsapp" onchange="toggleCampoForm('whatsapp')" class="w-4 h-4 text-emerald-600 rounded">
+                            <label for="check-whatsapp" class="text-sm font-medium text-slate-800">WhatsApp / Telefono</label>
+                        </div>
+                        <input type="text" id="nuovo-telefono" placeholder="Inserisci numero di telefono..." class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm w-full hidden bg-white">
+
+                        <div class="flex items-center gap-3 bg-white p-3 rounded-xl border border-emerald-100 shadow-sm">
+                            <input type="checkbox" id="check-email" onchange="toggleCampoForm('email')" class="w-4 h-4 text-emerald-600 rounded">
+                            <label for="check-email" class="text-sm font-medium text-slate-800">Email di contatto</label>
+                        </div>
+                        <input type="email" id="nuovo-email" placeholder="Inserisci indirizzo email..." class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm w-full hidden bg-white">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Foto del prodotto (fino a 5 immagini)</label>
+                        <input type="file" id="nuove-foto" accept="image/*" multiple class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm w-full bg-slate-50 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-100 file:text-emerald-800 hover:file:bg-emerald-200 transition">
+                    </div>
+
+                    <button onclick="salvaAnnuncio()" class="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-bold hover:bg-emerald-700 transition shadow-md shadow-emerald-600/20" id="btn-salva-annuncio-action">Pubblica Annuncio Ora 🚀</button>
+                </div>
+            </div>
+
+            <!-- Intestazione Bacheca con Contatore e Ordinamento -->
+            <div id="sezione-filtri-tipo" class="flex justify-between items-center mb-4 flex-wrap gap-4 px-2">
+                <h3 id="titolo-conteggio-annunci" class="text-xl font-bold text-slate-900">Annunci disponibili (0)</h3>
+                
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-semibold text-slate-500">Ordina per:</span>
+                    <select id="selettore-ordinamento" onchange="caricaAnnunci()" class="border border-slate-300 rounded-xl px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold text-slate-700">
+                        <option value="recente">Dal più recente</option>
+                        <option value="vecchio">Dal meno recente</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Bacheca Annunci -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5" id="lista-annunci"></div>
+
+            <!-- Pulsante Carica Altri -->
+            <div id="container-carica-altri" class="text-center mt-8 hidden">
+                <button onclick="caricaAltriAnnunci()" class="bg-white border border-slate-300 text-slate-700 px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-50 transition shadow-sm">Carica altri annunci 📦</button>
+            </div>
+        </div>
+
+        <!-- Sezione Dettaglio Annuncio -->
+        <div id="sezione-dettaglio" class="bg-white rounded-3xl shadow-sm p-8 hidden max-w-3xl mx-auto border border-slate-200">
+            <button onclick="tornaAllaBacheca()" class="text-slate-500 hover:text-slate-800 text-sm font-medium mb-6 flex items-center gap-2">
+                ← Torna alla bacheca
+            </button>
+            <div id="dettaglio-contenuto"></div>
+        </div>
+
+        <!-- PAGINA: CHI SIAMO -->
+        <div id="sezione-chi-siamo" class="bg-white rounded-3xl shadow-sm p-8 hidden max-w-3xl mx-auto border border-slate-200">
+            <button onclick="tornaAllaBacheca()" class="text-slate-500 hover:text-slate-800 text-sm font-medium mb-6 flex items-center gap-2">
+                ← Torna alla bacheca
+            </button>
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 shadow-inner">🌱</div>
+                <h2 class="text-3xl font-extrabold text-slate-900 mb-2">Il progetto EcoDonno</h2>
+                <p class="text-sm text-slate-600 max-w-lg mx-auto">La piattaforma di re-commerce e donazione nata nel 2026 per dare una seconda vita alle cose e azzerare gli sprechi[cite: 1].</p>
+            </div>
+            
+            <div class="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-6 text-white mb-8 shadow-md text-center">
+                <h3 class="text-xl font-bold mb-1">♻️ Economia Circolare a KM Zero</h3>
+                <p class="text-emerald-50 text-xs">Uniti per un futuro senza sprechi, regalando ciò che non usi più a chi ne ha bisogno vicino a te.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                <div class="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 text-center">
+                    <span id="stat-oggetti-salvati" class="text-3xl font-extrabold text-emerald-700">0</span>
+                    <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mt-1">Oggetti salvati dallo spreco</h4>
+                </div>
+                <div class="bg-teal-50 p-5 rounded-2xl border border-teal-100 text-center">
+                    <span class="text-3xl font-extrabold text-teal-700">100%</span>
+                    <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mt-1">Riuso solidale e gratuito</h4>
+                </div>
+            </div>
+
+            <div class="space-y-4 text-sm text-slate-700 leading-relaxed">
+                <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold text-slate-900 mb-1">🌍 Come è nato</h4>
+                    <p class="text-xs text-slate-600">EcoDonno nasce nel 2026 con l'intento di unire le persone attraverso il dono e il riuso solidale, riducendo l'impatto ambientale[cite: 1].</p>
+                </div>
+            </div>
+            <div class="mt-8 text-center">
+                <button onclick="tornaAllaBacheca()" class="bg-emerald-600 text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-emerald-700 transition shadow-sm">Torna alla bacheca</button>
+            </div>
+        </div>
+
+        <!-- PAGINA: ASSISTENZA -->
+        <div id="sezione-assistenza" class="bg-white rounded-3xl shadow-sm p-8 hidden max-w-3xl mx-auto border border-slate-200">
+            <button onclick="tornaAllaBacheca()" class="text-slate-500 hover:text-slate-800 text-sm font-medium mb-6 flex items-center gap-2">
+                ← Torna alla bacheca
+            </button>
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 shadow-inner">💬</div>
+                <h2 class="text-3xl font-extrabold text-slate-900 mb-2">Centro Assistenza & FAQ</h2>
+                <p class="text-sm text-slate-600 max-w-lg mx-auto">Trova subito risposte alle domande frequenti oppure scrivi direttamente al team di amministrazione.</p>
+            </div>
+
+            <div class="space-y-3 mb-8">
+                <div class="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50">
+                    <button onclick="toggleFaq(this)" class="w-full p-4 text-left font-bold text-sm text-slate-800 flex justify-between items-center focus:outline-none">
+                        <span>❓ Come posso pubblicare un oggetto in regalo?</span>
+                        <span class="text-emerald-600 font-extrabold text-lg">›</span>
+                    </button>
+                    <div class="p-4 bg-white border-t border-slate-100 text-xs text-slate-600 hidden">
+                        Clicca sul pulsante verde "+ Pubblica Annuncio" in alto nella barra di navigazione, compila il titolo, seleziona "In Regalo", carica fino a 5 foto e salva!
+                    </div>
+                </div>
+
+                <div class="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50">
+                    <button onclick="toggleFaq(this)" class="w-full p-4 text-left font-bold text-sm text-slate-800 flex justify-between items-center focus:outline-none">
+                        <span>❓ Gli scambi su EcoDonno sono gratuiti?</span>
+                        <span class="text-emerald-600 font-extrabold text-lg">›</span>
+                    </button>
+                    <div class="p-4 bg-white border-t border-slate-100 text-xs text-slate-600 hidden">
+                        Assolutamente sì! EcoDonno è una piattaforma basata sull'economia circolare e sul dono solidale. È vietata qualsiasi richiesta di denaro per gli oggetti contrassegnati come regalo.
+                    </div>
+                </div>
+
+                <div class="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50">
+                    <button onclick="toggleFaq(this)" class="w-full p-4 text-left font-bold text-sm text-slate-800 flex justify-between items-center focus:outline-none">
+                        <span>❓ Come funzionano i messaggi privati?</span>
+                        <span class="text-emerald-600 font-extrabold text-lg">›</span>
+                    </button>
+                    <div class="p-4 bg-white border-t border-slate-100 text-xs text-slate-600 hidden">
+                        Quando un utente ti scrive per un annuncio, riceverai e gestirai tutte le conversazioni direttamente nella sezione "💬 Messaggi" del tuo profilo personale.
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4">
+                <h4 class="font-bold text-slate-900 text-sm">Non hai trovato la risposta? Scrivici un messaggio</h4>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Il tuo nome o email</label>
+                    <input type="text" id="asst-nome" placeholder="Es. Mario Rossi..." class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm w-full bg-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Messaggio per gli amministratori</label>
+                    <textarea id="asst-testo" placeholder="Scrivi qui la tua richiesta..." class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm w-full h-32 bg-white"></textarea>
+                </div>
+                <button onclick="inviaMessaggioAssistenza()" class="w-full bg-emerald-600 text-white py-3 rounded-xl text-sm font-bold hover:bg-emerald-700 transition shadow-md">Invia Messaggio al Team 🚀</button>
+            </div>
+        </div>
+
+        <!-- PAGINA: REGOLE DELLA COMMUNITY -->
+        <div id="sezione-regole" class="bg-white rounded-3xl shadow-sm p-8 hidden max-w-3xl mx-auto border border-slate-200">
+            <button onclick="tornaAllaBacheca()" class="text-slate-500 hover:text-slate-800 text-sm font-medium mb-6 flex items-center gap-2">
+                ← Torna alla bacheca
+            </button>
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 shadow-inner">📜</div>
+                <h2 class="text-3xl font-extrabold text-slate-900 mb-2">Regole della Community</h2>
+                <p class="text-sm text-slate-600 max-w-lg mx-auto">Linee guida e standard di comportamento per mantenere EcoDonno uno spazio sicuro per tutti.</p>
+            </div>
+            <div class="space-y-4 text-sm">
+                <div class="p-5 bg-rose-50 border border-rose-200 rounded-2xl">
+                    <h4 class="font-bold text-rose-800 text-base mb-2">❌ Contenuti e merci severamente vietati</h4>
+                    <ul class="space-y-1.5 text-rose-900 text-xs font-medium">
+                        <li>• Sostanze stupefacenti, droghe o articoli illegali.</li>
+                        <li>• Materiale a carattere sessuale, pornografico o offensivo.</li>
+                        <li>• Armi, esplosivi o articoli pericolosi.</li>
+                        <li>• Prodotti contraffatti o violazioni di copyright.</li>
+                    </ul>
+                </div>
+                <div class="p-5 bg-emerald-50 border border-emerald-200 rounded-2xl">
+                    <h4 class="font-bold text-emerald-800 text-base mb-2">✅ Comportamenti raccomandati</h4>
+                    <ul class="space-y-1.5 text-emerald-900 text-xs font-medium">
+                        <li>• Massima cortesia e rispetto reciproco nelle chat.</li>
+                        <li>• Descrizioni veritiere e foto reali degli oggetti offerti.</li>
+                        <li>• Gratuità assoluta per gli oggetti pubblicati "In Regalo".</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGINA: SICUREZZA -->
+        <div id="sezione-sicurezza" class="bg-white rounded-3xl shadow-sm p-8 hidden max-w-3xl mx-auto border border-slate-200">
+            <button onclick="tornaAllaBacheca()" class="text-slate-500 hover:text-slate-800 text-sm font-medium mb-6 flex items-center gap-2">
+                ← Torna alla bacheca
+            </button>
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 shadow-inner">🛡️</div>
+                <h2 class="text-3xl font-extrabold text-slate-900 mb-2">Sicurezza e Prevenzione</h2>
+                <p class="text-sm text-slate-600 max-w-lg mx-auto">Consigli pratici per difenderti da truffe, furti di dati e scambiare in totale tranquillità.</p>
+            </div>
+            <div class="space-y-4 text-sm">
+                <div class="p-5 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <h4 class="font-bold text-slate-900 text-base mb-1">🔒 Protezione dell'account</h4>
+                    <p class="text-xs text-slate-600">Usa una password robusta e non comunicare mai codici di verifica o password personali ad altri utenti.</p>
+                </div>
+                <div class="p-5 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <h4 class="font-bold text-slate-900 text-base mb-1">📍 Incontri fisici</h4>
+                    <p class="text-xs text-slate-600">Per il ritiro degli oggetti, preferisci luoghi pubblici e ben frequentati durante le ore diurne.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGINA: CONDIZIONI D'USO -->
+        <div id="sezione-condizioni" class="bg-white rounded-3xl shadow-sm p-8 hidden max-w-3xl mx-auto border border-slate-200">
+            <button onclick="tornaAllaBacheca()" class="text-slate-500 hover:text-slate-800 text-sm font-medium mb-6 flex items-center gap-2">
+                ← Torna alla bacheca
+            </button>
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 shadow-inner">📋</div>
+                <h2 class="text-3xl font-extrabold text-slate-900 mb-1">Condizioni d'Uso</h2>
+                <p class="text-sm text-slate-600">Termini generali che disciplinano l'utilizzo dei servizi di EcoDonno.</p>
+            </div>
+
+            <div class="flex gap-2 border-b border-slate-200 pb-3 mb-6 overflow-x-auto">
+                <button onclick="mostraTabCondizioni('tab-c1', this)" class="tab-btn-cond px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white transition whitespace-nowrap">1. Ambito</button>
+                <button onclick="mostraTabCondizioni('tab-c2', this)" class="tab-btn-cond px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition whitespace-nowrap">2. Gratuità</button>
+                <button onclick="mostraTabCondizioni('tab-c3', this)" class="tab-btn-cond px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition whitespace-nowrap">3. Responsabilità</button>
+            </div>
+
+            <div class="space-y-4 text-xs text-slate-700 leading-relaxed">
+                <div id="tab-c1" class="tab-content-cond p-5 bg-slate-50 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold text-slate-900 text-sm mb-1">Ambito del servizio</h4>
+                    <p>EcoDonno fornisce una piattaforma tecnologica per facilitare l'incontro tra utenti che desiderano donare o cercare oggetti usati a titolo gratuito all'interno della community.</p>
+                </div>
+                <div id="tab-c2" class="tab-content-cond p-5 bg-slate-50 rounded-2xl border border-slate-200 hidden">
+                    <h4 class="font-bold text-slate-900 text-sm mb-1">Natura gratuita degli annunci</h4>
+                    <p>Gli oggetti pubblicati come "In Regalo" devono essere ceduti a titolo completamente gratuito. È severamente vietato richiedere compensi in denaro per beni offerti in donazione.</p>
+                </div>
+                <div id="tab-c3" class="tab-content-cond p-5 bg-slate-50 rounded-2xl border border-slate-200 hidden">
+                    <h4 class="font-bold text-slate-900 text-sm mb-1">Responsabilità dei contenuti</h4>
+                    <p>Gli utenti sono gli unici responsabili della veridicità, accuratezza e legalità dei testi, delle descrizioni e delle immagini caricate all'interno dei propri annunci.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGINA: PRIVACY POLICY -->
+        <div id="sezione-privacy" class="bg-white rounded-3xl shadow-sm p-8 hidden max-w-3xl mx-auto border border-slate-200">
+            <button onclick="tornaAllaBacheca()" class="text-slate-500 hover:text-slate-800 text-sm font-medium mb-6 flex items-center gap-2">
+                ← Torna alla bacheca
+            </button>
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 shadow-inner">🔒</div>
+                <h2 class="text-3xl font-extrabold text-slate-900 mb-1">Privacy Policy</h2>
+                <p class="text-sm text-slate-600">Informativa sulla protezione dei dati personali ai sensi del GDPR.</p>
+            </div>
+
+            <div class="flex gap-2 border-b border-slate-200 pb-3 mb-6 overflow-x-auto">
+                <button onclick="mostraTabPrivacy('tab-p1', this)" class="tab-btn-priv px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white transition whitespace-nowrap">Titolare</button>
+                <button onclick="mostraTabPrivacy('tab-p2', this)" class="tab-btn-priv px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition whitespace-nowrap">Finalità</button>
+                <button onclick="mostraTabPrivacy('tab-p3', this)" class="tab-btn-priv px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition whitespace-nowrap">Diritti</button>
+            </div>
+
+            <div class="space-y-4 text-xs text-slate-700 leading-relaxed">
+                <div id="tab-p1" class="tab-content-priv p-5 bg-slate-50 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold text-slate-900 text-sm mb-1">Titolare del trattamento</h4>
+                    <p>Il titolare del trattamento dei dati personali raccolti tramite la piattaforma EcoDonno è il gestore del servizio.</p>
+                </div>
+                <div id="tab-p2" class="tab-content-priv p-5 bg-slate-50 rounded-2xl border border-slate-200 hidden">
+                    <h4 class="font-bold text-slate-900 text-sm mb-1">Finalità d'uso</h4>
+                    <p>I dati (email, nome e indirizzo di spedizione inseriti nel profilo) sono trattati esclusivamente per consentire il funzionamento del servizio di bacheca annunci e la comunicazione tra utenti.</p>
+                </div>
+                <div id="tab-p3" class="tab-content-priv p-5 bg-slate-50 rounded-2xl border border-slate-200 hidden">
+                    <h4 class="font-bold text-slate-900 text-sm mb-1">I tuoi diritti</h4>
+                    <p>Gli utenti possono in qualsiasi momento modificare o eliminare i propri dati personali accedendo all'area "Mio Profilo" o richiedendo la cancellazione dell'account.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGINA: GESTIONE COOKIES -->
+        <div id="sezione-cookies" class="bg-white rounded-3xl shadow-sm p-8 hidden max-w-3xl mx-auto border border-slate-200">
+            <button onclick="tornaAllaBacheca()" class="text-slate-500 hover:text-slate-800 text-sm font-medium mb-6 flex items-center gap-2">
+                ← Torna alla bacheca
+            </button>
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 shadow-inner">🍪</div>
+                <h2 class="text-3xl font-extrabold text-slate-900 mb-2">Gestione Cookies</h2>
+                <p class="text-sm text-slate-600 max-w-lg mx-auto">Trasparenza sull'uso dei cookie tecnici all'interno della piattaforma.</p>
+            </div>
+            <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-700 leading-relaxed">
+                <h4 class="font-bold text-slate-900 text-sm mb-1">Cookie tecnici essenziali</h4>
+                <p>EcoDonno impiega esclusivamente cookie tecnici necessari alla gestione della sessione utente e dei token di autenticazione Supabase. Non vengono impiegati cookie di profilazione o tracciamento.</p>
+            </div>
+        </div>
+
+        <!-- PAGINA: LAVORA CON NOI -->
+        <div id="sezione-lavora" class="bg-white rounded-3xl shadow-sm p-8 hidden max-w-3xl mx-auto text-center py-12 border border-slate-200">
+            <button onclick="tornaAllaBacheca()" class="text-slate-500 hover:text-slate-800 text-sm font-medium mb-6 flex items-center gap-2">
+                ← Torna alla bacheca
+            </button>
+            <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 shadow-inner">💼</div>
+            <h2 class="text-3xl font-extrabold text-slate-900 mb-3">Lavora con noi</h2>
+            <p class="text-slate-600 text-sm max-w-md mx-auto mb-6">Al momento non ci sono posizioni aperte o le candidature sono temporaneamente disabilitate. Ti ringraziamo per l'interesse verso EcoDonno!</p>
+        </div>
+
+        <!-- PAGINA: MAPPA DEL SITO -->
+        <div id="sezione-mappa" class="bg-white rounded-3xl shadow-sm p-8 hidden max-w-3xl mx-auto border border-slate-200">
+            <button onclick="tornaAllaBacheca()" class="text-slate-500 hover:text-slate-800 text-sm font-medium mb-6 flex items-center gap-2">
+                ← Torna alla bacheca
+            </button>
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 shadow-inner">🗺️</div>
+                <h2 class="text-3xl font-extrabold text-slate-900 mb-1">Mappa del sito</h2>
+            </div>
+            <ul class="space-y-2.5 text-sm text-emerald-600 font-semibold bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <li><a href="#" onclick="tornaAllaBacheca(); return false;" class="hover:underline">🏠 Home / Bacheca Annunci</a></li>
+                <li><a href="#" onclick="apriPaginaGenerica('sezione-chi-siamo'); return false;" class="hover:underline">📖 Il progetto EcoDonno (Chi siamo)</a></li>
+                <li><a href="#" onclick="apriPaginaGenerica('sezione-assistenza'); return false;" class="hover:underline">💬 Centro Assistenza & FAQ</a></li>
+                <li><a href="#" onclick="apriPaginaGenerica('sezione-regole'); return false;" class="hover:underline">📜 Regole della Community</a></li>
+                <li><a href="#" onclick="apriPaginaGenerica('sezione-sicurezza'); return false;" class="hover:underline">🛡️ Sicurezza e Prevenzione Truffe</a></li>
+                <li><a href="#" onclick="apriPaginaGenerica('sezione-condizioni'); return false;" class="hover:underline">📋 Condizioni d'Uso</a></li>
+                <li><a href="#" onclick="apriPaginaGenerica('sezione-privacy'); return false;" class="hover:underline">🔒 Privacy Policy</a></li>
+                <li><a href="#" onclick="apriPaginaGenerica('sezione-cookies'); return false;" class="hover:underline">🍪 Gestione Cookies</a></li>
+                <li><a href="#" onclick="apriPaginaGenerica('sezione-lavora'); return false;" class="hover:underline">💼 Lavora con noi</a></li>
+            </ul>
+        </div>
+
+        <!-- SEZIONE IMPOSTAZIONI & PROFILO -->
+        <div id="sezione-profilo" class="bg-white rounded-3xl shadow-sm p-8 hidden max-w-3xl mx-auto border border-slate-200">
+            <button onclick="tornaAllaBacheca()" class="text-slate-500 hover:text-slate-800 text-sm font-medium mb-6 flex items-center gap-2">
+                ← Torna alla bacheca
+            </button>
+            
+            <h2 class="text-3xl font-extrabold text-slate-900 mb-1">Impostazioni</h2>
+            <p class="text-sm text-slate-500 mb-6" id="impostazioni-email-utente">-</p>
+
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden mb-8">
+                <div onclick="apriSchedaImpostazioni('dati')" class="p-4 hover:bg-slate-50 cursor-pointer flex justify-between items-center transition">
+                    <span class="text-sm font-bold text-slate-800">I tuoi dati e contatti</span>
+                    <span class="text-slate-400 font-bold">›</span>
+                </div>
+                <div onclick="apriSchedaImpostazioni('indirizzo')" class="p-4 hover:bg-slate-50 cursor-pointer flex justify-between items-center transition">
+                    <span class="text-sm font-bold text-slate-800">Indirizzo di spedizione / consegna</span>
+                    <span class="text-slate-400 font-bold">›</span>
+                </div>
+                <div onclick="apriSchedaImpostazioni('password')" class="p-4 hover:bg-slate-50 cursor-pointer flex justify-between items-center transition">
+                    <span class="text-sm font-bold text-slate-800">Cambio password</span>
+                    <span class="text-slate-400 font-bold">›</span>
+                </div>
+                <div onclick="apriSchedaImpostazioni('email')" class="p-4 hover:bg-slate-50 cursor-pointer flex justify-between items-center transition">
+                    <span class="text-sm font-bold text-slate-800">Modifica email</span>
+                    <span class="text-slate-400 font-bold">›</span>
+                </div>
+            </div>
+
+            <div id="pannello-scheda-impostazioni" class="bg-slate-50 p-6 rounded-2xl border border-slate-200 mb-8 hidden"></div>
+
+            <div class="flex gap-4 border-b border-slate-200 pb-4 mb-6 flex-wrap">
+                <button onclick="mostraMieiAnnunci()" id="tab-miei" class="font-bold text-emerald-600 border-b-2 border-emerald-600 pb-1">I miei annunci (0)</button>
+                <button onclick="mostraDonatiProfilo()" id="tab-donati" class="font-bold text-slate-400 pb-1">🎉 Annunci donati (0)</button>
+                <button onclick="mostraPreferiti()" id="tab-pref" class="font-bold text-slate-400 pb-1">Annunci preferiti (❤️ 0)</button>
+                <button onclick="mostraMessaggiProfilo()" id="tab-msg" class="font-bold text-slate-400 pb-1">💬 Messaggi <span id="badge-conteggio-messaggi" class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-xs ml-1">0</span></button>
+                <button onclick="mostraUtentiBloccati()" id="tab-bloccati" class="font-bold text-slate-400 pb-1">🚫 Utenti bloccati</button>
+            </div>
+
+            <div id="profilo-contenuto-dinamico"></div>
+
+            <div class="pt-8 border-t border-slate-200 mt-8">
+                <button onclick="eseguiLogout()" class="bg-rose-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-rose-700 transition">Disconnettiti (Logout)</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODALE SCRITTURA MESSAGGIO PRIVATO -->
+    <div id="modale-nuovo-messaggio" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-3xl shadow-2xl p-6 max-w-md w-full relative">
+            <button onclick="chiudiModaleNuovoMessaggio()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+            <h3 class="text-lg font-bold text-slate-900 mb-1">Invia messaggio privato</h3>
+            <p class="text-xs text-slate-500 mb-4 pb-3 border-b border-slate-100">Scrivi il tuo messaggio per il proprietario dell'oggetto.</p>
+            
+            <textarea id="testo-nuovo-messaggio-privato" placeholder="Scrivi qui il tuo messaggio..." class="border border-slate-300 rounded-xl px-4 py-3 text-sm w-full h-32 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-4"></textarea>
+            
+            <div class="flex gap-2">
+                <button onclick="confermaInvioMessaggioPrivato()" class="bg-emerald-600 text-white flex-1 py-3 rounded-xl text-xs font-bold hover:bg-emerald-700 transition shadow-sm">Invia Messaggio 🚀</button>
+                <button onclick="chiudiModaleNuovoMessaggio()" class="bg-slate-200 text-slate-700 px-4 py-3 rounded-xl text-xs font-bold hover:bg-slate-300 transition">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE APERTURA CHAT / RISPOSTA CON OPZIONI GESTIONE INTERNE -->
+    <div id="modale-chat-completa" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-3xl shadow-2xl p-6 max-w-lg w-full relative flex flex-col max-h-[85vh]">
+            <button onclick="chiudiModaleChat()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+            
+            <!-- Intestazione Chat Pulita e Opzioni Interne -->
+            <div class="flex justify-between items-center mb-2 pb-3 border-b border-slate-100 pr-8">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900" id="chat-titolo-oggetto">Conversazione</h3>
+                    <span class="text-[10px] text-emerald-600 font-semibold">⚡ Chat in tempo reale</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button onclick="apriModaleConfermaEliminazione()" title="Elimina chat" class="bg-rose-50 text-rose-600 hover:bg-rose-100 px-2.5 py-1.5 rounded-lg text-xs font-bold transition">🗑️ Elimina</button>
+                    <button onclick="apriModaleBlocco()" title="Blocca utente" class="bg-amber-50 text-amber-700 hover:bg-amber-100 px-2.5 py-1.5 rounded-lg text-xs font-bold transition">🚫 Blocca</button>
+                    <button onclick="apriModaleSegnalazione()" title="Segnala chat" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-bold transition">⚠️ Segnala</button>
+                </div>
+            </div>
+            
+            <!-- Contenitore Storico Messaggi -->
+            <div id="chat-storico-messaggi" class="flex-grow overflow-y-auto space-y-3 pr-2 mb-4 max-h-96"></div>
+
+            <!-- Box Invio Risposta -->
+            <div class="pt-3 border-t border-slate-100 flex gap-2">
+                <input type="text" id="input-nuovo-messaggio-chat" placeholder="Scrivi una risposta..." class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm flex-grow bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500" onkeypress="if(event.key === 'Enter') inviaMessaggioDallaChat()">
+                <button onclick="inviaMessaggioDallaChat()" class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-700 transition shadow-sm">Invia 🚀</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE INTERNA PER CONFERMA ELIMINAZIONE CHAT -->
+    <div id="modale-conferma-eliminazione" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full relative text-center">
+            <h3 class="text-lg font-bold text-slate-900 mb-2">🗑️ Elimina Conversazione</h3>
+            <p class="text-xs text-slate-600 mb-4">Vuoi davvero eliminare questa chat? Verranno rimossi tutti i messaggi associati.</p>
+            <div class="flex gap-2">
+                <button onclick="eliminaChatAttiva()" class="bg-rose-600 text-white flex-1 py-2.5 rounded-xl text-xs font-bold hover:bg-rose-700 transition">Elimina</button>
+                <button onclick="chiudiModaleConfermaEliminazione()" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-300 transition">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE INTERNA PER BLOCCARE UTENTE -->
+    <div id="modale-blocco-utente" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full relative text-center">
+            <h3 class="text-lg font-bold text-slate-900 mb-2">🚫 Blocca Utente</h3>
+            <p class="text-xs text-slate-600 mb-4">Se blocchi questo utente, non potrà più inviarti messaggi per questo annuncio.</p>
+            <div class="flex gap-2">
+                <button onclick="confermaBloccoUtente()" class="bg-amber-600 text-white flex-1 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-700 transition">Conferma Blocco</button>
+                <button onclick="chiudiModaleBlocco()" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-300 transition">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE INTERNA PER SEGNALARE UTENTE -->
+    <div id="modale-segnalazione" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full relative">
+            <h3 class="text-lg font-bold text-slate-900 mb-1">⚠️ Segnala Conversazione</h3>
+            <p class="text-xs text-slate-500 mb-4">Specifica il motivo della segnalazione per il team di amministrazione di EcoDonno.</p>
+            <textarea id="testo-motivo-segnalazione" placeholder="Descrivi il problema (es. linguaggio offensivo, articolo non conforme)..." class="border border-slate-300 rounded-xl px-4 py-3 text-xs w-full h-28 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-4"></textarea>
+            <div class="flex gap-2">
+                <button onclick="inviaSegnalazioneAdmin()" class="bg-rose-600 text-white flex-1 py-2.5 rounded-xl text-xs font-bold hover:bg-rose-700 transition">Invia Segnalazione</button>
+                <button onclick="chiudiModaleSegnalazione()" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-300 transition">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-slate-200 mt-16 text-slate-600 text-xs">
+        <div class="max-w-7xl mx-auto px-4 py-12 grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-4">EcoDonno</h4>
+                <ul class="space-y-2.5">
+                    <li><a href="#" onclick="apriPaginaGenerica('sezione-assistenza'); return false;" class="hover:text-emerald-600 transition">Assistenza</a></li>
+                    <li><a href="#" onclick="apriPaginaGenerica('sezione-regole'); return false;" class="hover:text-emerald-600 transition">Regole della community</a></li>
+                    <li><a href="#" onclick="apriPaginaGenerica('sezione-sicurezza'); return false;" class="hover:text-emerald-600 transition">Sicurezza</a></li>
+                    <li><a href="#" onclick="apriPaginaGenerica('sezione-condizioni'); return false;" class="hover:text-emerald-600 transition">Condizioni d'uso</a></li>
+                    <li><a href="#" onclick="apriPaginaGenerica('sezione-privacy'); return false;" class="hover:text-emerald-600 transition">Privacy Policy</a></li>
+                    <li><a href="#" onclick="apriPaginaGenerica('sezione-cookies'); return false;" class="hover:text-emerald-600 transition">Gestisci cookies</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-4">Chi siamo</h4>
+                <ul class="space-y-2.5">
+                    <li><a href="#" onclick="apriPaginaGenerica('sezione-chi-siamo'); return false;" class="hover:text-emerald-600 transition font-semibold text-emerald-600">Il progetto EcoDonno</a></li>
+                    <li><a href="#" onclick="apriPaginaGenerica('sezione-lavora'); return false;" class="hover:text-emerald-600 transition">Lavora con noi</a></li>
+                    <li><a href="#" onclick="apriPaginaGenerica('sezione-mappa'); return false;" class="hover:text-emerald-600 transition">Mappa del sito</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-4">Seguici su</h4>
+                <ul class="space-y-2.5">
+                    <li><a href="https://facebook.com" target="_blank" class="hover:text-emerald-600 transition">Facebook</a></li>
+                    <li><a href="https://tiktok.com" target="_blank" class="hover:text-emerald-600 transition">TikTok</a></li>
+                    <li><a href="https://instagram.com" target="_blank" class="hover:text-emerald-600 transition">Instagram</a></li>
+                    <li><a href="https://youtube.com" target="_blank" class="hover:text-emerald-600 transition">YouTube</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-4">Scarica gratis l'App</h4>
+                <ul class="space-y-2.5">
+                    <li><a href="#" class="hover:text-emerald-600 transition">EcoDonno per Android</a></li>
+                    <li><a href="#" class="hover:text-emerald-600 transition">EcoDonno per iOS</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="border-t border-slate-100 py-6 text-center text-slate-400">
+            <p>© 2026 EcoDonno 🌱 - Tutti i diritti riservati. P.IVA 01234567890</p>
+        </div>
+    </footer>
+
+    <!-- MODALE AUTENTICAZIONE -->
+    <div id="modale-auth" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full relative">
+            <button onclick="chiudiModaleAuth()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-lg">✕</button>
+            <h3 class="text-xl font-bold text-slate-900 mb-4" id="titolo-modale-auth">Accedi o Registrati a EcoDonno</h3>
+            
+            <div id="form-auth-standard" class="space-y-4">
+                <input type="email" id="auth-email" placeholder="La tua email..." class="border border-slate-300 rounded-xl px-4 py-2 text-sm w-full">
+                <input type="password" id="auth-password" placeholder="Password (min 6 caratteri)..." class="border border-slate-300 rounded-xl px-4 py-2 text-sm w-full">
+                
+                <div class="flex gap-2 pt-2">
+                    <button onclick="gestisciLogin()" class="bg-emerald-600 text-white flex-1 py-3 rounded-xl font-medium hover:bg-emerald-700 transition">Accedi</button>
+                    <button onclick="gestisciRegistrazione()" class="bg-slate-900 text-white flex-1 py-3 rounded-xl font-medium hover:bg-slate-800 transition">Registrati</button>
+                </div>
+                
+                <div class="text-center pt-2">
+                    <button onclick="mostraSezionePasswordDimenticata()" class="text-xs text-emerald-600 font-semibold hover:underline">Password dimenticata?</button>
+                </div>
+            </div>
+
+            <div id="form-password-dimenticata" class="space-y-4 hidden">
+                <p class="text-xs text-slate-600">Inserisci l'indirizzo email associato al tuo account. Ti invieremo un link per il ripristino della password.</p>
+                <input type="email" id="auth-email-recupero" placeholder="La tua email..." class="border border-slate-300 rounded-xl px-4 py-2 text-sm w-full">
+                <div class="flex gap-2 pt-2">
+                    <button onclick="inviaRichiestaRipristinoPassword()" class="bg-emerald-600 text-white flex-1 py-3 rounded-xl font-medium hover:bg-emerald-700 transition">Invia Richiesta</button>
+                    <button onclick="tornaAlLoginStandard()" class="bg-slate-200 text-slate-700 px-4 py-3 rounded-xl font-medium hover:bg-slate-300 transition">Annulla</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script>
+        const SUPABASE_URL = 'https://vqpojxtvzejzjndavyro.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_sWJNSp4RALBSTC0Um-07sg_FGWV_IHn';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let utenteCorrente = null;
+        let annuncioSelezionato = null;
+        let timeoutAutocomplete = null;
+        let limiteAnnunci = 20;
+        let chatAnnuncioIdAttivo = null;
+        let realtimeChannelChat = null;
+        let annuncioIdInInvioMessaggio = null;
+
+        function mostraToast(messaggio, tipo = 'successo') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColore = tipo === 'successo' ? 'bg-emerald-600' : 'bg-slate-900';
+            
+            toast.className = `${bgColore} text-white px-5 py-3 rounded-xl shadow-lg text-xs font-bold pointer-events-auto transform translate-y-2 opacity-0 transition-all duration-300 flex items-center gap-2`;
+            toast.innerHTML = `<span>${tipo === 'successo' ? '✅' : 'ℹ️'}</span> ${messaggio}`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        async function verificaSessione() {
+            try {
+                const { data: { session }, error } = await supabaseClient.auth.getSession();
+                
+                if (error) {
+                    console.error("❌ Errore nel recupero della sessione:", error.message);
+                    utenteCorrente = null;
+                } else {
+                    utenteCorrente = session ? session.user : null;
+                }
+            } catch (e) {
+                console.error("❌ Eccezione durante la verifica della sessione:", e);
+                utenteCorrente = null;
+            }
+
+            if (utenteCorrente) {
+                console.log("✅ Sessione attiva trovata per:", utenteCorrente.email);
+            } else {
+                console.warn("⚠️ Nessun utente loggato in questo momento.");
+            }
+
+            aggiornaNavbarAuth();
+            caricaAnnunci();
+
+            if (utenteCorrente) {
+                await aggiornaTuttiIContatoriProfilo();
+                
+                const contenitoreMsg = document.getElementById('profilo-contenuto-dinamico');
+                if (contenitoreMsg && typeof caricaTabellaInbox === 'function') {
+                    console.log("📥 Avvio automatico caricamento Inbox all'avvio...");
+                    await caricaTabellaInbox();
+                }
+            }
+        }
+
+        async function aggiornaTuttiIContatoriProfilo() {
+            if (!utenteCorrente) return;
+            
+            const { count: countMiei } = await supabaseClient.from('annunci').select('*', { count: 'exact', head: true }).eq('user_id', utenteCorrente.id).eq('stato', 'disponibile');
+            const elMiei = document.getElementById('tab-miei');
+            if (elMiei) elMiei.textContent = `I miei annunci (${countMiei || 0})`;
+
+            const { count: countDonati } = await supabaseClient.from('annunci').select('*', { count: 'exact', head: true }).eq('user_id', utenteCorrente.id).eq('stato', 'donato');
+            const elDonati = document.getElementById('tab-donati');
+            if (elDonati) elDonati.textContent = `🎉 Annunci donati (${countDonati || 0})`;
+
+            const { count: countPref } = await supabaseClient.from('preferiti').select('*', { count: 'exact', head: true }).eq('user_id', utenteCorrente.id);
+            const elPref = document.getElementById('tab-pref');
+            if (elPref) elPref.textContent = `Annunci preferiti (❤️ ${countPref || 0})`;
+
+            const mioEmail = utenteCorrente.email.toLowerCase().trim();
+            const mioNome = mioEmail.split('@')[0];
+
+            const { data: mieiAnnunci } = await supabaseClient.from('annunci').select('id').eq('user_id', utenteCorrente.id);
+            const idsAnnunciMiei = mieiAnnunci ? mieiAnnunci.map(a => a.id) : [];
+
+            let queryMsgUnread = supabaseClient
+                .from('messaggi')
+                .select('*', { count: 'exact', head: true })
+                .eq('letto', false)
+                .neq('autore', mioNome);
+
+            if (idsAnnunciMiei.length > 0) {
+                queryMsgUnread = queryMsgUnread.in('annuncio_id', idsAnnunciMiei);
+            } else {
+                queryMsgUnread = queryMsgUnread.eq('annuncio_id', -1);
+            }
+            
+            const { count: countMsg } = await queryMsgUnread;
+            const badgeMsg = document.getElementById('badge-conteggio-messaggi');
+            if (badgeMsg) badgeMsg.textContent = countMsg || 0;
+        }
+
+        function tornaAllaBacheca() {
+            if (typeof realtimeChannelInbox !== 'undefined' && realtimeChannelInbox) {
+                supabaseClient.removeChannel(realtimeChannelInbox);
+                realtimeChannelInbox = null;
+            }
+
+            document.getElementById('sezione-dettaglio').classList.add('hidden');
+            document.getElementById('sezione-profilo').classList.add('hidden');
+            document.getElementById('sezione-chi-siamo').classList.add('hidden');
+            document.getElementById('sezione-assistenza').classList.add('hidden');
+            document.getElementById('sezione-regole').classList.add('hidden');
+            document.getElementById('sezione-sicurezza').classList.add('hidden');
+            document.getElementById('sezione-condizioni').classList.add('hidden');
+            document.getElementById('sezione-privacy').classList.add('hidden');
+            document.getElementById('sezione-cookies').classList.add('hidden');
+            document.getElementById('sezione-lavora').classList.add('hidden');
+            document.getElementById('sezione-mappa').classList.add('hidden');
+            document.getElementById('form-box').classList.add('hidden');
+            
+            document.getElementById('box-ricerca-principale').classList.remove('hidden');
+            document.getElementById('sezione-filtri-tipo').classList.remove('hidden');
+            document.getElementById('lista-annunci').classList.remove('hidden');
+            document.getElementById('sezione-principale').classList.remove('hidden');
+
+            annuncioSelezionato = null;
+            limiteAnnunci = 20;
+            caricaAnnunci();
+            if (utenteCorrente) aggiornaTuttiIContatoriProfilo();
+        }
+
+        async function apriPaginaGenerica(idSezione) {
+            document.getElementById('sezione-principale').classList.add('hidden');
+            document.getElementById('sezione-dettaglio').classList.add('hidden');
+            document.getElementById('sezione-profilo').classList.add('hidden');
+            document.getElementById('sezione-chi-siamo').classList.add('hidden');
+            document.getElementById('sezione-assistenza').classList.add('hidden');
+            document.getElementById('sezione-regole').classList.add('hidden');
+            document.getElementById('sezione-sicurezza').classList.add('hidden');
+            document.getElementById('sezione-condizioni').classList.add('hidden');
+            document.getElementById('sezione-privacy').classList.add('hidden');
+            document.getElementById('sezione-cookies').classList.add('hidden');
+            document.getElementById('sezione-lavora').classList.add('hidden');
+            document.getElementById('sezione-mappa').classList.add('hidden');
+            document.getElementById('form-box').classList.add('hidden');
+
+            document.getElementById(idSezione).classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            if (idSezione === 'sezione-chi-siamo') {
+                const { count } = await supabaseClient.from('annunci').select('*', { count: 'exact', head: true });
+                document.getElementById('stat-oggetti-salvati').textContent = count || 0;
+            }
+        }
+
+        function toggleFaq(btn) {
+            const contenuto = btn.nextElementSibling;
+            contenuto.classList.toggle('hidden');
+        }
+
+        function mostraTabCondizioni(tabId, btn) {
+            document.querySelectorAll('.tab-content-cond').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn-cond').forEach(b => {
+                b.className = "tab-btn-cond px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition whitespace-nowrap";
+            });
+            document.getElementById(tabId).classList.remove('hidden');
+            btn.className = "tab-btn-cond px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white transition whitespace-nowrap";
+        }
+
+        function mostraTabPrivacy(tabId, btn) {
+            document.querySelectorAll('.tab-content-priv').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn-priv').forEach(b => {
+                b.className = "tab-btn-priv px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition whitespace-nowrap";
+            });
+            document.getElementById(tabId).classList.remove('hidden');
+            btn.className = "tab-btn-priv px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white transition whitespace-nowrap";
+        }
+
+        async function inviaMessaggioAssistenza() {
+            const nome = document.getElementById('asst-nome').value.trim();
+            const testo = document.getElementById('asst-testo').value.trim();
+            if (!nome || !testo) { mostraToast("Compila tutti i campi!", "info"); return; }
+            mostraToast("Messaggio inviato al team con successo!", "successo");
+            document.getElementById('asst-nome').value = '';
+            document.getElementById('asst-testo').value = '';
+            tornaAllaBacheca();
+        }
+
+        async function gestisciPreferito(event, idAnnuncio) {
+            event.stopPropagation();
+            if (!utenteCorrente) { mostraToast("Accedi per aggiungere preferiti!", "info"); apriModaleAuth(); return; }
+
+            const { data: esiste } = await supabaseClient.from('preferiti').select('*').eq('annuncio_id', idAnnuncio).eq('user_id', utenteCorrente.id).single();
+            const { data: annuncioData } = await supabaseClient.from('annunci').select('preferiti').eq('id', idAnnuncio).single();
+            let preferitiAttuali = annuncioData.preferiti || 0;
+
+            if (esiste) {
+                await supabaseClient.from('preferiti').delete().eq('annuncio_id', idAnnuncio).eq('user_id', utenteCorrente.id);
+                preferitiAttuali = Math.max(0, preferitiAttuali - 1);
+                mostraToast("Rimosso dai preferiti", "info");
+            } else {
+                await supabaseClient.from('preferiti').insert([{ annuncio_id: idAnnuncio, user_id: utenteCorrente.id }]);
+                preferitiAttuali += 1;
+                mostraToast("Aggiunto ai preferiti ❤️", "successo");
+            }
+
+            await supabaseClient.from('annunci').update({ preferiti: preferitiAttuali }).eq('id', idAnnuncio);
+            caricaAnnunci();
+
+            if (annuncioSelezionato && annuncioSelezionato.id === idAnnuncio) {
+                annuncioSelezionato.preferiti = preferitiAttuali;
+                mostraDettaglio(annuncioSelezionato);
+            }
+        }
+
+        function apriFormInserimento() {
+            if (!utenteCorrente) { mostraToast("Accedi per pubblicare un annuncio!", "info"); apriModaleAuth(); return; }
+            
+            document.getElementById('sezione-profilo').classList.add('hidden');
+            document.getElementById('sezione-dettaglio').classList.add('hidden');
+            document.getElementById('sezione-chi-siamo').classList.add('hidden');
+            document.getElementById('sezione-assistenza').classList.add('hidden');
+            document.getElementById('sezione-regole').classList.add('hidden');
+            document.getElementById('sezione-sicurezza').classList.add('hidden');
+            document.getElementById('sezione-condizioni').classList.add('hidden');
+            document.getElementById('sezione-privacy').classList.add('hidden');
+            document.getElementById('sezione-cookies').classList.add('hidden');
+            document.getElementById('sezione-lavora').classList.add('hidden');
+            document.getElementById('sezione-mappa').classList.add('hidden');
+
+            document.getElementById('sezione-principale').classList.remove('hidden');
+            document.getElementById('box-ricerca-principale').classList.add('hidden');
+            document.getElementById('sezione-filtri-tipo').classList.add('hidden');
+            document.getElementById('lista-annunci').classList.add('hidden');
+            
+            document.getElementById('edit-annuncio-id').value = '';
+            document.getElementById('nuovo-titolo').value = '';
+            document.getElementById('nuovo-desc').value = '';
+            document.getElementById('nuovo-zona').value = '';
+            document.getElementById('form-titolo-box').textContent = "Pubblica un nuovo oggetto";
+            document.getElementById('btn-salva-annuncio-action').textContent = "Pubblica Annuncio Ora 🚀";
+
+            document.getElementById('form-box').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function apriFormModifica(annuncioJsonStr) {
+            const annuncio = JSON.parse(annuncioJsonStr);
+            
+            document.getElementById('sezione-dettaglio').classList.add('hidden');
+            document.getElementById('sezione-principale').classList.remove('hidden');
+            document.getElementById('box-ricerca-principale').classList.add('hidden');
+            document.getElementById('sezione-filtri-tipo').classList.add('hidden');
+            document.getElementById('lista-annunci').classList.add('hidden');
+
+            document.getElementById('edit-annuncio-id').value = annuncio.id;
+            document.getElementById('nuovo-titolo').value = annuncio.titolo || '';
+            document.getElementById('nuovo-desc').value = annuncio.descrizione || '';
+            document.getElementById('nuovo-tipo').value = annuncio.tipo || 'regalo';
+            document.getElementById('nuovo-categoria').value = annuncio.categoria || 'Arredamento';
+            document.getElementById('nuovo-zona').value = annuncio.zona || '';
+            
+            document.getElementById('form-titolo-box').textContent = "Modifica il tuo annuncio";
+            document.getElementById('btn-salva-annuncio-action').textContent = "Salva Modifiche 💾";
+
+            document.getElementById('form-box').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function salvaAnnuncio() {
+            const annuncioId = document.getElementById('edit-annuncio-id').value;
+            const titolo = document.getElementById('nuovo-titolo').value.trim();
+            const descrizione = document.getElementById('nuovo-desc').value.trim();
+            const tipo = document.getElementById('nuovo-tipo').value;
+            const categoria = document.getElementById('nuovo-categoria').value;
+            const zona = document.getElementById('nuovo-zona').value.trim();
+            const contattaChat = document.getElementById('check-chat').checked;
+            const contattaWhatsapp = document.getElementById('check-whatsapp').checked;
+            const contattaEmail = document.getElementById('check-email').checked;
+            const telefono = document.getElementById('nuovo-telefono').value.trim();
+            const emailUtente = document.getElementById('nuovo-email').value.trim();
+            const fileInput = document.getElementById('nuove-foto');
+
+            if (!titolo || !zona) { 
+                mostraToast("Attenzione: Compila almeno Titolo e Zona!", "info"); 
+                return; 
+            }
+
+            let fotoUrls = [];
+            if (fileInput.files.length > 0) {
+                const numeroFoto = Math.min(fileInput.files.length, 5);
+                for (let i = 0; i < numeroFoto; i++) {
+                    const file = fileInput.files[i];
+                    const fileName = `${Date.now()}_${i}.${file.name.split('.').pop()}`;
+                    const { error: uploadError } = await supabaseClient.storage.from('immagini').upload(fileName, file);
+                    if (!uploadError) {
+                        const { data: publicURLData } = supabaseClient.storage.from('immagini').getPublicUrl(fileName);
+                        fotoUrls.push(publicURLData.publicUrl);
+                    }
+                }
+            }
+
+            const codiceUnicoAnnuncio = `ECO-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+            const datiAnnuncio = {
+                titolo, 
+                descrizione, 
+                tipo, 
+                categoria, 
+                zona, 
+                contatta_chat: contattaChat, 
+                contatta_whatsapp: contattaWhatsapp, 
+                contatta_email: contattaEmail,
+                telefono: contattaWhatsapp ? telefono : null, 
+                email_utente: contattaEmail ? emailUtente : null,
+                user_id: utenteCorrente.id,
+                stato: 'disponibile',
+                preferiti: 0
+            };
+
+            if (fotoUrls.length > 0) {
+                datiAnnuncio.foto_urls = fotoUrls;
+                datiAnnuncio.foto_url = fotoUrls[0];
+            }
+
+            let error = null;
+            if (annuncioId) {
+                const res = await supabaseClient.from('annunci').update(datiAnnuncio).eq('id', annuncioId);
+                error = res.error;
+            } else {
+                const res = await supabaseClient.from('annunci').insert([datiAnnuncio]);
+                error = res.error;
+            }
+
+            if (!error) {
+                mostraToast(annuncioId ? "Annuncio aggiornato con successo!" : "Annuncio pubblicato con successo! 🚀", "successo");
+                document.getElementById('form-box').classList.add('hidden');
+                tornaAllaBacheca();
+            } else {
+                console.error("Errore Supabase:", error);
+                mostraToast("Errore durante il salvataggio: " + (error.message || 'Controlla i campi'), "info");
+            }
+        }
+
+        async function caricaAnnunci() {
+            const testoFiltro = document.getElementById('input-ricerca-testo').value.trim();
+            const categoriaFiltro = document.getElementById('filtro-categoria').value;
+            const tipoRicercaFiltro = document.getElementById('filtro-tipo-ricerca').value;
+            const zonaFiltro = document.getElementById('input-zona').value.trim();
+            const ordinamento = document.getElementById('selettore-ordinamento').value;
+
+            let query = supabaseClient.from('annunci').select('*', { count: 'exact' }).eq('stato', 'disponibile');
+
+            if (ordinamento === 'vecchio') {
+                query = query.order('id', { ascending: true });
+            } else {
+                query = query.order('id', { ascending: false });
+            }
+
+            if (testoFiltro) query = query.ilike('titolo', `%${testoFiltro}%`);
+            if (categoriaFiltro) query = query.eq('categoria', categoriaFiltro);
+            
+            if (tipoRicercaFiltro && tipoRicercaFiltro !== 'tutti') {
+                query = query.eq('tipo', tipoRicercaFiltro);
+            }
+
+            if (zonaFiltro) {
+                const z = zonaFiltro.toLowerCase();
+                if (z.includes('trentino') && z.includes('adige')) {
+                    query = query.or('zona.ilike.%trento%,zona.ilike.%bolzano%,zona.ilike.%trentino%,zona.ilike.%rovereto%,zona.ilike.%merano%,zona.ilike.%bressanone%');
+                } else if (z.includes('friuli') && z.includes('venezia')) {
+                    query = query.or('zona.ilike.%trieste%,zona.ilike.%udine%,zona.ilike.%gorizia%,zona.ilike.%pordenone%,zona.ilike.%monfalcone%');
+                } else if (z.includes('veneto')) {
+                    query = query.or('zona.ilike.%venezia%,zona.ilike.%verona%,zona.ilike.%padova%,zona.ilike.%treviso%,zona.ilike.%vicenza%,zona.ilike.%belluno%,zona.ilike.%rovigo%');
+                } else if (z.includes('lombardia')) {
+                    query = query.or('zona.ilike.%milano%,zona.ilike.%brescia%,zona.ilike.%bergamo%,zona.ilike.%monza%,zona.ilike.%como%,zona.ilike.%varese%');
+                } else {
+                    const zonaPulita = zonaFiltro
+                        .replace('Provincia di ', '')
+                        .replace('Regione ', '')
+                        .replace(' (provincia)', '')
+                        .replace(' (regione)', '');
+                    query = query.ilike('zona', `%${zonaPulita}%`);
+                }
+            }
+
+            query = query.range(0, limiteAnnunci - 1);
+
+            const { data, count, error } = await query;
+            const contenitore = document.getElementById('lista-annunci');
+            contenitore.innerHTML = '';
+
+            document.getElementById('titolo-conteggio-annunci').textContent = `Annunci disponibili (${count || 0})`;
+
+            const containerCarica = document.getElementById('container-carica-altri');
+            if (data && data.length < (count || 0)) {
+                containerCarica.classList.remove('hidden');
+            } else {
+                containerCarica.classList.add('hidden');
+            }
+
+            if (error || !data || data.length === 0) {
+                contenitore.innerHTML = '<p class="text-slate-500 col-span-full text-center py-8">Nessun annuncio trovato con questi criteri di ricerca.</p>';
+                return;
+            }
+
+            data.forEach(annuncio => {
+                const isRegalo = annuncio.tipo === 'regalo';
+                const fotoPrincipale = annuncio.foto_url || (annuncio.foto_urls && annuncio.foto_urls[0]) || '';
+                const anteprimaFoto = fotoPrincipale ? `<img src="${fotoPrincipale}" class="w-full h-32 object-cover rounded-lg mb-2">` : '';
+                const numPreferiti = annuncio.preferiti || 0;
+                const codiceIdVisibile = annuncio.codice_unico || `ECO-${annuncio.id}`;
+
+                const card = `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between hover:border-emerald-500 hover:-translate-y-1 hover:shadow-md transition-all duration-250 relative cursor-pointer" onclick='mostraDettaglio(${JSON.stringify(annuncio)})'>
+                        <button onclick="gestisciPreferito(event, ${annuncio.id})" class="absolute top-3 right-3 bg-white/90 px-2.5 py-1 rounded-full shadow hover:bg-rose-50 text-rose-500 transition flex items-center gap-1 text-[11px] font-bold z-10">
+                            ❤️ (${numPreferiti})
+                        </button>
+                        
+                        <div>
+                            ${anteprimaFoto}
+                            <div class="flex justify-between items-center mb-1.5">
+                                <span class="${isRegalo ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'} text-[9px] font-semibold px-2 py-0.5 rounded-full">${isRegalo ? 'In Regalo' : 'Cercato'}</span>
+                                <span class="text-[9px] font-mono text-slate-400">ID: ${codiceIdVisibile}</span>
+                            </div>
+                            <h4 class="text-base font-bold text-slate-900 mt-1 line-clamp-1">${annuncio.titolo}</h4>
+                            <p class="text-slate-600 text-xs mt-1 line-clamp-2">${annuncio.descrizione || ''}</p>
+                        </div>
+                        <div class="flex justify-between items-center mt-3 pt-2 border-t border-slate-100 text-xs text-slate-500">
+                            <span>📍 ${annuncio.zona}</span>
+                            <span class="text-[11px] text-emerald-600 font-medium hover:underline">Vedi dettagli →</span>
+                        </div>
+                    </div>
+                `;
+                contenitore.innerHTML += card;
+            });
+        }
+
+        function caricaAltriAnnunci() {
+            limiteAnnunci += 20;
+            caricaAnnunci();
+        }
+
+        async function cambiaStatoAnnuncio(id, nuovoStato) {
+            const { error } = await supabaseClient.from('annunci').update({ stato: nuovoStato }).eq('id', id);
+            if (!error) {
+                mostraToast(nuovoStato === 'donato' ? "Oggetto contrassegnato come donato! 🎉" : "Annuncio rimesso disponibile", "successo");
+                
+                apriProfilo();
+                if (nuovoStato === 'donato') {
+                    mostraDonatiProfilo();
+                } else {
+                    mostraMieiAnnunci();
+                }
+            } else {
+                mostraToast("Errore nell'aggiornamento dello stato", "info");
+            }
+        }
+
+        function mostraDettaglio(annuncio) {
+            annuncioSelezionato = annuncio;
+            document.getElementById('sezione-principale').classList.add('hidden');
+            document.getElementById('sezione-profilo').classList.add('hidden');
+            document.getElementById('sezione-chi-siamo').classList.add('hidden');
+            document.getElementById('sezione-assistenza').classList.add('hidden');
+            document.getElementById('sezione-regole').classList.add('hidden');
+            document.getElementById('sezione-sicurezza').classList.add('hidden');
+            document.getElementById('sezione-condizioni').classList.add('hidden');
+            document.getElementById('sezione-privacy').classList.add('hidden');
+            document.getElementById('sezione-cookies').classList.add('hidden');
+            document.getElementById('sezione-lavora').classList.add('hidden');
+            document.getElementById('sezione-mappa').classList.add('hidden');
+            document.getElementById('sezione-dettaglio').classList.remove('hidden');
+
+            const isRegalo = annuncio.tipo === 'regalo';
+            const isDonato = annuncio.stato === 'donato';
+            const numPreferiti = annuncio.preferiti || 0;
+            const codiceIdVisibile = annuncio.codice_unico || `ECO-${annuncio.id}`;
+            
+            let galleriaHtml = '';
+            const listaFoto = annuncio.foto_urls && annuncio.foto_urls.length > 0 ? annuncio.foto_urls : (annuncio.foto_url ? [annuncio.foto_url] : []);
+            
+            if (listaFoto.length > 0) {
+                let miniatureHtml = '';
+                listaFoto.forEach((url) => {
+                    miniatureHtml += `<img src="${url}" onclick="cambiaFotoPrincipale('${url}')" class="w-16 h-16 object-cover rounded-lg cursor-pointer border-2 border-slate-200 hover:border-emerald-600 transition">`;
+                });
+
+                galleriaHtml = `
+                    <div class="mb-6">
+                        <img id="foto-principale-zoom" src="${listaFoto[0]}" class="w-full max-h-96 object-cover rounded-2xl shadow-sm mb-3">
+                        <div class="flex gap-2 overflow-x-auto pb-2">${miniatureHtml}</div>
+                    </div>
+                `;
+            }
+
+            let opzioniContatto = '';
+            const sonoProprietario = utenteCorrente && utenteCorrente.id === annuncio.user_id;
+
+            if (sonoProprietario) {
+                const annuncioJsonStr = JSON.stringify(annuncio).replace(/"/g, '&quot;');
+                opzioniContatto = `
+                    <div class="flex flex-col sm:flex-row gap-3 w-full">
+                        <button onclick="apriFormModifica('${annuncioJsonStr}')" class="bg-amber-500 text-white text-center px-6 py-3 rounded-xl font-bold hover:bg-amber-600 transition shadow-sm flex-grow">✏️ Modifica Annuncio</button>
+                        <button onclick="eliminaMioAnnuncioDettaglio(${annuncio.id})" class="bg-rose-600 text-white text-center px-6 py-3 rounded-xl font-bold hover:bg-rose-700 transition shadow-sm flex-grow">🗑️ Elimina Annuncio</button>
+                    </div>
+                `;
+            } else {
+                if (!isDonato) {
+                    if (annuncio.contatta_chat) {
+                        opzioniContatto += `<button onclick="inviaMessaggioDaDettaglio(${annuncio.id})" class="bg-emerald-600 text-white text-center px-6 py-3 rounded-xl font-medium hover:bg-emerald-700 transition shadow-sm flex-grow block">💬 Invia Messaggio Privato</button>`;
+                    }
+
+                    if (annuncio.contatta_whatsapp && annuncio.telefono) {
+                        const msg = encodeURIComponent(`Ciao! Sono interessato al tuo annuncio su EcoDonno: "${annuncio.titolo}".`);
+                        opzioniContatto += `<a href="https://wa.me/${annuncio.telefono}?text=${msg}" target="_blank" class="bg-emerald-600 text-white text-center px-6 py-3 rounded-xl font-medium hover:bg-emerald-700 transition shadow-sm flex-grow block">💬 Contatta su WhatsApp</a>`;
+                    }
+
+                    if (annuncio.contatta_email && annuncio.email_utente) {
+                        const msg = encodeURIComponent(`Ciao!\n\nSono interessato al tuo annuncio su EcoDonno: "${annuncio.titolo}" (${annuncio.zona}).`);
+                        opzioniContatto += `<a href="mailto:${annuncio.email_utente}?subject=${encodeURIComponent('Interesse per EcoDonno: ' + annuncio.titolo)}&body=${msg}" class="bg-slate-900 text-white text-center px-6 py-3 rounded-xl font-medium hover:bg-slate-800 transition shadow-sm flex-grow block">✉️ Contatta via Email</a>`;
+                    }
+                } else {
+                    opzioniContatto = `<div class="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-center text-sm font-bold">🎉 Questo oggetto è già stato donato con successo e non è più disponibile.</div>`;
+                }
+            }
+
+            let tastoCambiaStatoProprietario = '';
+            if (sonoProprietario) {
+                if (!isDonato) {
+                    tastoCambiaStatoProprietario = `<button onclick="cambiaStatoAnnuncio(${annuncio.id}, 'donato')" class="bg-emerald-100 text-emerald-800 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-200 transition">🎉 Segna come "Donato"</button>`;
+                } else {
+                    tastoCambiaStatoProprietario = `<button onclick="cambiaStatoAnnuncio(${annuncio.id}, 'disponibile')" class="bg-slate-100 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-200 transition">🔄 Rimetti disponibile</button>`;
+                }
+            }
+
+            document.getElementById('dettaglio-contenuto').innerHTML = `
+                ${galleriaHtml}
+                <div class="flex justify-between items-center">
+                    <span class="${isRegalo ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'} text-xs font-semibold px-3 py-1 rounded-full">${isRegalo ? 'In Regalo' : 'Cercato'}</span>
+                    <div class="flex items-center gap-2">
+                        ${tastoCambiaStatoProprietario}
+                        <button onclick="gestisciPreferito(event, ${annuncio.id})" class="bg-rose-50 px-4 py-2 rounded-full shadow hover:bg-rose-100 text-rose-600 transition flex items-center gap-2 text-xs font-bold">
+                            ❤️ (${numPreferiti}) Preferiti
+                        </button>
+                    </div>
+                </div>
+                <h2 class="text-2xl font-extrabold text-slate-900 mt-3">${annuncio.titolo}</h2>
+                <p class="text-sm text-slate-500 mt-1">📍 Zona: <b>${annuncio.zona}</b> • ID Annuncio: <b class="font-mono text-emerald-600">${codiceIdVisibile}</b> • Pubblicato il ${new Date(annuncio.creato_il).toLocaleDateString()}</p>
+                <div class="mt-6 border-t border-slate-100 pt-6">
+                    <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2">Descrizione</h3>
+                    <p class="text-slate-700 leading-relaxed whitespace-pre-line bg-slate-50 p-4 rounded-xl">${annuncio.descrizione || ''}</p>
+                </div>
+                ${opzioniContatto ? `<div class="mt-8 flex flex-col sm:flex-row gap-4">${opzioniContatto}</div>` : ''}
+            `;
+        }
+
+        async function eliminaMioAnnuncioDettaglio(id) {
+            if (confirm("Vuoi davvero eliminare definitivamente questo annuncio?")) {
+                await supabaseClient.from('annunci').delete().eq('id', id);
+                mostraToast("Annuncio eliminato con successo", "successo");
+                apriProfilo();
+                mostraMieiAnnunci();
+            }
+        }
+
+        function inviaMessaggioDaDettaglio(annuncioId) {
+            if (!utenteCorrente) { mostraToast("Devi effettuare l'accesso!", "info"); apriModaleAuth(); return; }
+            annuncioIdInInvioMessaggio = annuncioId;
+            document.getElementById('testo-nuovo-messaggio-privato').value = '';
+            document.getElementById('modale-nuovo-messaggio').classList.remove('hidden');
+        }
+
+        function chiudiModaleNuovoMessaggio() {
+            document.getElementById('modale-nuovo-messaggio').classList.add('hidden');
+            annuncioIdInInvioMessaggio = null;
+        }
+
+        async function confermaInvioMessaggioPrivato() {
+            const campoTesto = document.getElementById('testo-nuovo-messaggio-privato');
+            if (!campoTesto) return;
+            
+            const testo = campoTesto.value.trim();
+            if (!testo || !annuncioIdInInvioMessaggio) {
+                mostraToast("Scrivi un messaggio prima di inviare!", "info");
+                return;
+            }
+
+            const autore = utenteCorrente.email ? utenteCorrente.email.split('@')[0] : 'Utente';
+
+            const { data, error } = await supabaseClient.from('messaggi').insert([{ 
+                annuncio_id: annuncioIdInInvioMessaggio, 
+                autore: autore, 
+                testo: testo, 
+                letto: false,
+                user_id: utenteCorrente.id 
+            }]);
+
+            if (!error) {
+                mostraToast("Messaggio inviato con successo!", "successo");
+                chiudiModaleNuovoMessaggio();
+                await aggiornaTuttiIContatoriProfilo();
+            } else {
+                mostraToast("Errore nell'invio: " + error.message, "info");
+            }
+        }
+
+        async function apriChatCompleta(annuncioId, titoloAnnuncio) {
+            console.log(`💬 [CHAT] Apertura conversazione per annuncio ID: ${annuncioId}`);
+
+            // 1. Salviamo l'ID della chat attiva
+            chatAnnuncioIdAttivo = annuncioId;
+
+            // 2. Puliamo il vecchio canale Realtime se esisteva
+            if (realtimeChannelChat) {
+                try {
+                    await supabaseClient.removeChannel(realtimeChannelChat);
+                } catch (e) {
+                    console.error("Errore rimozione canale:", e);
+                }
+                realtimeChannelChat = null;
+            }
+
+            // 3. Mostriamo la modale della chat a schermo
+            const modaleChat = document.getElementById('modale-chat-completa');
+            if (modaleChat) {
+                modaleChat.classList.remove('hidden');
+            }
+            
+            const titoloElemento = document.getElementById('chat-titolo-oggetto');
+            if (titoloElemento) {
+                titoloElemento.textContent = titoloAnnuncio;
+            }
+
+            // 4. Identificazione sicura e pulita del nome utente attuale (senza spazi e in minuscolo)
+            if (!utenteCorrente || !utenteCorrente.email) {
+                console.error("❌ Errore: Utente non loggato o email mancante.");
+                return;
+            }
+            const mioNome = utenteCorrente.email.toLowerCase().split('@')[0].trim();
+
+            console.log(`👤 [CHAT] Utente autenticato che sta leggendo: "${mioNome}"`);
+
+            // 5. AGGIORNAMENTO FORZATO NEL DATABASE:
+            // Segnamo come letti (true) tutti i messaggi di questo annuncio 
+            // in cui l'autore NON corrisponde al nostro nome utente.
+            const { data: updatedRows, error: updateError } = await supabaseClient
+                .from('messaggi')
+                .update({ letto: true })
+                .eq('annuncio_id', Number(annuncioId))
+                .neq('autore', mioNome)
+                .eq('letto', false)
+                .select();
+
+            if (updateError) {
+                console.error("❌ Errore nell'aggiornamento dei messaggi a letti:", updateError);
+            } else {
+                console.log("✅ [DB] Messaggi dell'interlocutore aggiornati a letti:", updatedRows);
+            }
+
+            // 6. Carichiamo lo storico e aggiorniamo subito i contatori globali della Inbox
+            await caricaStoricoChatCompleta(annuncioId);
+            await aggiornaTuttiIContatoriProfilo();
+
+            // 7. Canale Realtime sincronizzato per gestire i messaggi in arrivo e in lettura
+            realtimeChannelChat = supabaseClient
+                .channel(`chat_sync_${annuncioId}_${Date.now()}`)
+                .on(
+                    'postgres_changes',
+                    { 
+                        event: '*', 
+                        schema: 'public', 
+                        table: 'messaggi' 
+                    },
+                    async (payload) => {
+                        const record = payload.new && Object.keys(payload.new).length > 0 ? payload.new : payload.old;
+                        const msgAnnuncioId = record ? record.annuncio_id : null;
+
+                        if (msgAnnuncioId && Number(msgAnnuncioId) === Number(annuncioId)) {
+                            // Se arriva un nuovo messaggio non nostro, lo marchiamo subito a letto nel DB
+                            if (payload.eventType === 'INSERT') {
+                                const autoreMsg = payload.new.autore ? payload.new.autore.toLowerCase().trim() : '';
+                                if (autoreMsg !== mioNome && payload.new.letto === false) {
+                                    await supabaseClient
+                                        .from('messaggi')
+                                        .update({ letto: true })
+                                        .eq('id', payload.new.id);
+                                }
+                            }
+
+                            // Ricarica la grafica in tempo reale per entrambi gli utenti
+                            await caricaStoricoChatCompleta(annuncioId);
+                            await aggiornaTuttiIContatoriProfilo();
+                        }
+                    }
+                )
+                .subscribe();
+        }
+
+        function chiudiModaleChat() {
+            if (realtimeChannelChat) {
+                supabaseClient.removeChannel(realtimeChannelChat);
+                realtimeChannelChat = null;
+            }
+            document.getElementById('modale-chat-completa').classList.add('hidden');
+            chatAnnuncioIdAttivo = null;
+            
+            if (document.getElementById('sezione-profilo') && !document.getElementById('sezione-profilo').classList.contains('hidden')) {
+                mostraMessaggiProfilo();
+            }
+            aggiornaTuttiIContatoriProfilo();
+        }
+
+        function apriModaleConfermaEliminazione() {
+            document.getElementById('modale-conferma-eliminazione').classList.remove('hidden');
+        }
+
+        function chiudiModaleConfermaEliminazione() {
+            document.getElementById('modale-conferma-eliminazione').classList.add('hidden');
+        }
+
+        async function eliminaChatAttiva() {
+            if (!chatAnnuncioIdAttivo) return;
+            
+            const { error } = await supabaseClient
+                .from('messaggi')
+                .delete()
+                .eq('annuncio_id', chatAnnuncioIdAttivo);
+            
+            if (!error) {
+                mostraToast("Chat eliminata con successo.", "successo");
+                chiudiModaleConfermaEliminazione();
+                chiudiModaleChat();
+                chatAnnuncioIdAttivo = null;
+                await aggiornaTuttiIContatoriProfilo();
+                await mostraMessaggiProfilo(); 
+            } else {
+                mostraToast("Errore durante l'eliminazione: " + error.message, "info");
+                chiudiModaleConfermaEliminazione();
+            }
+        }
+
+        function apriModaleBlocco() {
+            document.getElementById('modale-blocco-utente').classList.remove('hidden');
+        }
+
+        function chiudiModaleBlocco() {
+            document.getElementById('modale-blocco-utente').classList.add('hidden');
+        }
+
+        async function confermaBloccoUtente() {
+            if (!chatAnnuncioIdAttivo || !utenteCorrente) {
+                chiudiModaleBlocco();
+                return;
+            }
+
+            const { data: messaggiChat } = await supabaseClient
+                .from('messaggi')
+                .select('autore')
+                .eq('annuncio_id', chatAnnuncioIdAttivo)
+                .neq('autore', utenteCorrente.email.split('@')[0])
+                .limit(1);
+
+            const nomeDaBloccare = (messaggiChat && messaggiChat.length > 0) ? messaggiChat[0].autore : 'Utente';
+
+            const { error } = await supabaseClient
+                .from('utenti_bloccati')
+                .insert([{ user_id: utenteCorrente.id, utente_bloccato_nome: nomeDaBloccare }]);
+
+            if (!error) {
+                mostraToast("Utente bloccato con successo.", "successo");
+            } else {
+                mostraToast("Utente già bloccato o errore.", "info");
+            }
+
+            chiudiModaleBlocco();
+            chiudiModaleChat();
+        }
+
+        function apriModaleSegnalazione() {
+            document.getElementById('testo-motivo-segnalazione').value = '';
+            document.getElementById('modale-segnalazione').classList.remove('hidden');
+        }
+
+        function chiudiModaleSegnalazione() {
+            document.getElementById('modale-segnalazione').classList.add('hidden');
+        }
+
+        function inviaSegnalazioneAdmin() {
+            const motivo = document.getElementById('testo-motivo-segnalazione').value.trim();
+            if (!motivo) {
+                mostraToast("Inserisci un motivo per la segnalazione.", "info");
+                return;
+            }
+            mostraToast("Segnalazione inviata con successo agli amministratori. Grazie!", "successo");
+            chiudiModaleSegnalazione();
+        }
+
+        async function caricaStoricoChatCompleta(annuncioId) {
+            const contenitoreStorico = document.getElementById('chat-storico-messaggi');
+            if (!contenitoreStorico) return;
+
+            const mioEmail = utenteCorrente && utenteCorrente.email ? utenteCorrente.email.toLowerCase().trim() : '';
+            const mioNome = mioEmail ? mioEmail.split('@')[0] : '';
+
+            const { data, error } = await supabaseClient
+                .from('messaggi')
+                .select('*')
+                .eq('annuncio_id', Number(annuncioId))
+                .order('creato_il', { ascending: true });
+
+            if (error || !data || data.length === 0) {
+                contenitoreStorico.innerHTML = '<p class="text-slate-400 text-xs text-center py-4">Nessun messaggio in questa conversazione.</p>';
+                return;
+            }
+
+            contenitoreStorico.innerHTML = '';
+
+            data.forEach(msg => {
+                const autoreMsg = msg.autore ? msg.autore.toLowerCase().trim() : '';
+                const isMio = (mioNome && autoreMsg === mioNome) || (msg.user_id && utenteCorrente && msg.user_id === utenteCorrente.id);
+                
+                const allineamento = isMio ? 'ml-auto bg-emerald-600 text-white rounded-br-none' : 'mr-auto bg-slate-100 text-slate-800 rounded-bl-none';
+                const mittenteLabel = isMio ? 'Tu' : (msg.autore || 'Utente');
+                const dataOra = msg.creato_il ? new Date(msg.creato_il).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+                let spunteHtml = '';
+                if (isMio) {
+                    const isLetto = msg.letto === true;
+                    const spuntaIcona = isLetto ? '✓✓' : '✓';
+                    const spunteColore = isLetto ? 'text-emerald-300 font-bold text-sm' : 'text-slate-300 text-xs';
+                    spunteHtml = `<span class="ml-1.5 ${spunteColore}">${spuntaIcona}</span>`;
+                }
+
+                contenitoreStorico.innerHTML += `
+                    <div class="max-w-[80%] p-3.5 rounded-2xl shadow-sm text-xs ${allineamento}">
+                        <div class="flex justify-between items-center gap-4 mb-1 opacity-80 text-[10px] font-bold">
+                            <span>${mittenteLabel}</span>
+                            <span class="flex items-center">${dataOra} ${spunteHtml}</span>
+                        </div>
+                        <p class="leading-relaxed whitespace-pre-line">${msg.testo || ''}</p>
+                    </div>
+                `;
+            });
+
+            contenitoreStorico.scrollTop = contenitoreStorico.scrollHeight;
+        }
+
+        async function inviaMessaggioDallaChat() {
+            const input = document.getElementById('input-nuovo-messaggio-chat');
+            if (!input) return;
+
+            const testo = input.value.trim();
+            if (!testo || !chatAnnuncioIdAttivo || !utenteCorrente) return;
+
+            const autoreCorrente = utenteCorrente.email ? utenteCorrente.email.split('@')[0] : 'Utente';
+
+            const { error } = await supabaseClient.from('messaggi').insert([{ 
+                annuncio_id: Number(chatAnnuncioIdAttivo), 
+                autore: autoreCorrente, 
+                testo: testo, 
+                letto: false
+            }]);
+
+            if (!error) {
+                input.value = '';
+                await caricaStoricoChatCompleta(chatAnnuncioIdAttivo);
+                await aggiornaTuttiIContatoriProfilo();
+            } else {
+                mostraToast("Errore nell'invio: " + error.message, "info");
+            }
+        }
+
+        async function apriProfilo() {
+            document.getElementById('sezione-principale').classList.add('hidden');
+            document.getElementById('sezione-dettaglio').classList.add('hidden');
+            document.getElementById('sezione-chi-siamo').classList.add('hidden');
+            document.getElementById('sezione-assistenza').classList.add('hidden');
+            document.getElementById('sezione-regole').classList.add('hidden');
+            document.getElementById('sezione-sicurezza').classList.add('hidden');
+            document.getElementById('sezione-condizioni').classList.add('hidden');
+            document.getElementById('sezione-privacy').classList.add('hidden');
+            document.getElementById('sezione-cookies').classList.add('hidden');
+            document.getElementById('sezione-lavora').classList.add('hidden');
+            document.getElementById('sezione-mappa').classList.add('hidden');
+            document.getElementById('form-box').classList.add('hidden');
+            document.getElementById('sezione-profilo').classList.remove('hidden');
+            document.getElementById('impostazioni-email-utente').textContent = utenteCorrente ? utenteCorrente.email : '-';
+
+            const { data } = await supabaseClient.from('profili').select('*').eq('id', utenteCorrente.id).single();
+            window.profiloDatiCache = data || {};
+
+            await aggiornaTuttiIContatoriProfilo();
+            mostraMessaggiProfilo();
+        }
+
+        async function mostraUtentiBloccati() {
+            document.getElementById('tab-bloccati').className = "font-bold text-emerald-600 border-b-2 border-emerald-600 pb-1";
+            document.getElementById('tab-msg').className = "font-bold text-slate-400 pb-1";
+            document.getElementById('tab-miei').className = "font-bold text-slate-400 pb-1";
+            document.getElementById('tab-donati').className = "font-bold text-slate-400 pb-1";
+            document.getElementById('tab-pref').className = "font-bold text-slate-400 pb-1";
+
+            const contenitore = document.getElementById('profilo-contenuto-dinamico');
+            contenitore.className = "space-y-3";
+            contenitore.innerHTML = '<p class="text-slate-400 text-sm">Caricamento utenti bloccati...</p>';
+
+            if (!utenteCorrente) return;
+
+            const { data, error } = await supabaseClient
+                .from('utenti_bloccati')
+                .select('*')
+                .eq('user_id', utenteCorrente.id);
+
+            if (error || !data || data.length === 0) {
+                contenitore.innerHTML = '<p class="text-slate-500 text-center py-6">Non hai bloccato nessun utente.</p>';
+                return;
+            }
+
+            contenitore.innerHTML = '';
+            data.forEach(item => {
+                contenitore.innerHTML += `
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                        <div>
+                            <h4 class="font-bold text-slate-900 text-sm">🚫 Utente: ${item.utente_bloccato_nome}</h4>
+                            <p class="text-[10px] text-slate-400 mt-0.5">Bloccato il ${new Date(item.creato_il).toLocaleDateString()}</p>
+                        </div>
+                        <button onclick="sbloccaUtente(${item.id}, '${item.utente_bloccato_nome}')" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-4 py-2 rounded-xl text-xs font-bold transition">
+                            Sblocca 🔓
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        async function sbloccaUtente(idBlocco, nomeUtente) {
+            const { error } = await supabaseClient
+                .from('utenti_bloccati')
+                .delete()
+                .eq('id', idBlocco);
+
+            if (!error) {
+                mostraToast(`Hai sbloccato l'utente ${nomeUtente}.`, "successo");
+                mostraUtentiBloccati();
+            } else {
+                mostraToast("Errore durante lo sblocco dell'utente.", "info");
+            }
+        }
+
+        function apriSchedaImpostazioni(tipo) {
+            const pannello = document.getElementById('pannello-scheda-impostazioni');
+            pannello.classList.remove('hidden');
+            const data = window.profiloDatiCache || {};
+            const emailCorrente = utenteCorrente ? utenteCorrente.email : '';
+
+            if (tipo === 'dati') {
+                pannello.innerHTML = `
+                    <h3 class="text-lg font-bold text-slate-900 mb-4">I tuoi dati e contatti</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">Nome e Cognome</label>
+                            <input type="text" id="imp-nome" value="${data.nome_cognome || ''}" class="border border-slate-300 rounded-xl px-4 py-2 text-sm w-full bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">Telefono / WhatsApp</label>
+                            <input type="text" id="imp-tel" value="${data.telefono || ''}" class="border border-slate-300 rounded-xl px-4 py-2 text-sm w-full bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">Email di contatto pubblica</label>
+                            <input type="email" id="imp-email" value="${data.email_contatto || ''}" class="border border-slate-300 rounded-xl px-4 py-2 text-sm w-full bg-white">
+                        </div>
+                        <button onclick="salvaImpostazioniDati()" class="bg-emerald-600 text-white px-6 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 transition">Salva Dati</button>
+                    </div>
+                `;
+            } else if (tipo === 'indirizzo') {
+                pannello.innerHTML = `
+                    <h3 class="text-lg font-bold text-slate-900 mb-4">Indirizzo di spedizione / consegna</h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Via / Piazza</label>
+                                <input type="text" id="imp-via" value="${data.via || ''}" class="border border-slate-300 rounded-xl px-4 py-2 text-sm w-full bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Numero Civico</label>
+                                <input type="text" id="imp-civico" value="${data.civico || ''}" class="border border-slate-300 rounded-xl px-4 py-2 text-sm w-full bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Comune</label>
+                                <input type="text" id="imp-comune" value="${data.comune || ''}" class="border border-slate-300 rounded-xl px-4 py-2 text-sm w-full bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Provincia</label>
+                                <input type="text" id="imp-provincia" value="${data.provincia || ''}" class="border border-slate-300 rounded-xl px-4 py-2 text-sm w-full bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">CAP</label>
+                                <input type="text" id="imp-cap" value="${data.cap || ''}" class="border border-slate-300 rounded-xl px-4 py-2 text-sm w-full bg-white">
+                            </div>
+                        </div>
+                        <button onclick="salvaImpostazioniIndirizzo()" class="bg-emerald-600 text-white px-6 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 transition">Salva Indirizzo</button>
+                    </div>
+                `;
+            } else if (tipo === 'password') {
+                pannello.innerHTML = `
+                    <h3 class="text-lg font-bold text-slate-900 mb-4">Cambio password</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">Vecchia password</label>
+                            <input type="password" id="imp-vecchia-pwd" placeholder="Inserisci vecchia password..." class="border border-slate-300 rounded-xl px-4 py-2 text-sm w-full bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">Nuova password (min 6 caratteri)</label>
+                            <input type="password" id="imp-nuova-pwd" placeholder="Inserisci nuova password..." class="border border-slate-300 rounded-xl px-4 py-2 text-sm w-full bg-white">
+                        </div>
+                        <button onclick="salvaNuovaPassword()" class="bg-emerald-600 text-white px-6 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 transition">Aggiorna Password</button>
+                    </div>
+                `;
+            } else if (tipo === 'email') {
+                pannello.innerHTML = `
+                    <h3 class="text-lg font-bold text-slate-900 mb-4">Modifica email dell'account</h3>
+                    <div class="space-y-4">
+                        <p class="text-xs text-slate-500">Email attuale: <b>${emailCorrente}</b></p>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">Conferma la tua Email Attuale</label>
+                            <input type="email" id="imp-vecchia-email" placeholder="Inserisci la tua email attuale..." class="border border-slate-300 rounded-xl px-4 py-2 text-sm w-full bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">Nuova Email</label>
+                            <input type="email" id="imp-nuova-email" placeholder="Inserisci la nuova email..." class="border border-slate-300 rounded-xl px-4 py-2 text-sm w-full bg-white">
+                        </div>
+                        <button onclick="richiediModificaEmail()" class="bg-emerald-600 text-white px-6 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 transition">Invia Richiesta di Modifica</button>
+                    </div>
+                `;
+            }
+        }
+
+        async function salvaImpostazioniDati() {
+            const nome_cognome = document.getElementById('imp-nome').value.trim();
+            const telefono = document.getElementById('imp-tel').value.trim();
+            const email_contatto = document.getElementById('imp-email').value.trim();
+
+            const { error } = await supabaseClient.from('profili').upsert({ id: utenteCorrente.id, nome_cognome, telefono, email_contatto });
+            if (!error) {
+                mostraToast("Dati salvati con successo!", "successo");
+                window.profiloDatiCache.nome_cognome = nome_cognome;
+                window.profiloDatiCache.telefono = telefono;
+                window.profiloDatiCache.email_contatto = email_contatto;
+                document.getElementById('pannello-scheda-impostazioni').classList.add('hidden');
+            } else {
+                mostraToast("Errore nel salvataggio: " + error.message, "info");
+            }
+        }
+
+        async function salvaImpostazioniIndirizzo() {
+            const via = document.getElementById('imp-via').value.trim();
+            const civico = document.getElementById('imp-civico').value.trim();
+            const comune = document.getElementById('imp-comune').value.trim();
+            const provincia = document.getElementById('imp-provincia').value.trim();
+            const cap = document.getElementById('imp-cap').value.trim();
+
+            const { error } = await supabaseClient.from('profili').upsert({ id: utenteCorrente.id, via, civico, comune, provincia, cap });
+            if (!error) {
+                mostraToast("Indirizzo salvato con successo!", "successo");
+                window.profiloDatiCache.via = via;
+                window.profiloDatiCache.civico = civico;
+                window.profiloDatiCache.comune = comune;
+                window.profiloDatiCache.provincia = provincia;
+                window.profiloDatiCache.cap = cap;
+                document.getElementById('pannello-scheda-impostazioni').classList.add('hidden');
+            } else {
+                mostraToast("Errore nel salvataggio: " + error.message, "info");
+            }
+        }
+
+        async function salvaNuovaPassword() {
+            const vecchiaPassword = document.getElementById('imp-vecchia-pwd').value.trim();
+            const nuovaPassword = document.getElementById('imp-nuova-pwd').value.trim();
+
+            if (!vecchiaPassword || !nuovaPassword) {
+                mostraToast("Compila sia la vecchia che la nuova password!", "info");
+                return;
+            }
+            if (nuovaPassword.length < 6) {
+                mostraToast("La nuova password deve contenere almeno 6 caratteri!", "info");
+                return;
+            }
+
+            const { error: errorLogin } = await supabaseClient.auth.signInWithPassword({
+                email: utenteCorrente.email,
+                password: vecchiaPassword
+            });
+
+            if (errorLogin) {
+                mostraToast("La vecchia password non è corretta.", "info");
+                return;
+            }
+
+            const { error } = await supabaseClient.auth.updateUser({ password: nuovaPassword });
+            if (!error) {
+                mostraToast("Password aggiornata con successo!", "successo");
+                document.getElementById('imp-vecchia-pwd').value = '';
+                document.getElementById('imp-nuova-pwd').value = '';
+                document.getElementById('pannello-scheda-impostazioni').classList.add('hidden');
+            } else {
+                mostraToast("Errore durante l'aggiornamento: " + error.message, "info");
+            }
+        }
+
+        async function richiediModificaEmail() {
+            const vecchiaEmail = document.getElementById('imp-vecchia-email').value.trim();
+            const nuovaEmail = document.getElementById('imp-nuova-email').value.trim();
+
+            if (!vecchiaEmail || !nuovaEmail) {
+                mostraToast("Inserisci sia l'email attuale che la nuova!", "info");
+                return;
+            }
+
+            if (vecchiaEmail !== utenteCorrente.email) {
+                mostraToast("L'email attuale inserita non corrisponde.", "info");
+                return;
+            }
+
+            const { error } = await supabaseClient.auth.updateUser({ email: nuovaEmail });
+            if (!error) {
+                mostraToast("Richiesta inviata! Controlla la nuova casella email.", "successo");
+                document.getElementById('pannello-scheda-impostazioni').classList.add('hidden');
+            } else {
+                mostraToast("Errore nella richiesta: " + error.message, "info");
+            }
+        }
+
+        function mostraSezionePasswordDimenticata() {
+            document.getElementById('titolo-modale-auth').textContent = "Recupera Password";
+            document.getElementById('form-auth-standard').classList.add('hidden');
+            document.getElementById('form-password-dimenticata').classList.remove('hidden');
+        }
+
+        function tornaAlLoginStandard() {
+            document.getElementById('titolo-modale-auth').textContent = "Accedi o Registrati a EcoDonno";
+            document.getElementById('form-password-dimenticata').classList.add('hidden');
+            document.getElementById('form-auth-standard').classList.remove('hidden');
+        }
+
+        async function inviaRichiestaRipristinoPassword() {
+            const email = document.getElementById('auth-email-recupero').value.trim();
+            if (!email) { mostraToast("Inserisci la tua email!", "info"); return; }
+
+            const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.href,
+            });
+
+            if (!error) {
+                mostraToast("Email di ripristino inviata!", "successo");
+                chiudiModaleAuth();
+                tornaAlLoginStandard();
+            } else {
+                mostraToast("Errore: " + error.message, "info");
+            }
+        }
+
+        async function mostraPreferiti() {
+            document.getElementById('tab-pref').className = "font-bold text-emerald-600 border-b-2 border-emerald-600 pb-1";
+            document.getElementById('tab-miei').className = "font-bold text-slate-400 pb-1";
+            document.getElementById('tab-donati').className = "font-bold text-slate-400 pb-1";
+            document.getElementById('tab-msg').className = "font-bold text-slate-400 pb-1";
+
+            const contenitore = document.getElementById('profilo-contenuto-dinamico');
+            contenitore.className = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4";
+            contenitore.innerHTML = '<p class="text-slate-400 text-sm">Caricamento preferiti...</p>';
+
+            const { data: prefData } = await supabaseClient.from('preferiti').select('annuncio_id').eq('user_id', utenteCorrente.id);
+            const conteggioPref = prefData ? prefData.length : 0;
+            document.getElementById('tab-pref').textContent = `Annunci preferiti (❤️ ${conteggioPref})`;
+
+            if (!prefData || prefData.length === 0) {
+                contenitore.innerHTML = '<p class="text-slate-500 col-span-2 text-center py-6">Non hai ancora salvato alcun annuncio tra i preferiti.</p>';
+                return;
+            }
+
+            const ids = prefData.map(p => p.annuncio_id);
+            const { data: annunciData } = await supabaseClient.from('annunci').select('*').in('id', ids);
+
+            contenitore.innerHTML = '';
+            annunciData.forEach(annuncio => {
+                const fotoPrincipale = annuncio.foto_url || (annuncio.foto_urls && annuncio.foto_urls[0]) || '';
+                const anteprimaFoto = fotoPrincipale ? `<img src="${fotoPrincipale}" class="w-full h-28 object-cover rounded-lg mb-2">` : '';
+
+                contenitore.innerHTML += `
+                    <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-emerald-500 transition relative">
+                        <button onclick="rimuoviPreferitoProfilo(event, ${annuncio.id})" class="absolute top-2 right-2 bg-rose-50 p-1.5 rounded-full shadow hover:bg-rose-100 text-rose-600 transition text-[11px] font-bold" title="Rimuovi dai preferiti">
+                            ❌
+                        </button>
+                        <div onclick='mostraDettaglio(${JSON.stringify(annuncio)})' class="cursor-pointer">
+                            ${anteprimaFoto}
+                            <h4 class="font-bold text-slate-900 text-sm line-clamp-1">${annuncio.titolo}</h4>
+                            <p class="text-[11px] text-slate-500 mt-0.5">📍 ${annuncio.zona} • ❤️ (${annuncio.preferiti || 0})</p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        async function rimuoviPreferitoProfilo(event, idAnnuncio) {
+            event.stopPropagation();
+            await supabaseClient.from('preferiti').delete().eq('annuncio_id', idAnnuncio).eq('user_id', utenteCorrente.id);
+            
+            const { data: annuncioData } = await supabaseClient.from('annunci').select('preferiti').eq('id', idAnnuncio).single();
+            if (annuncioData) {
+                const preferitiAttuali = Math.max(0, (annuncioData.preferiti || 1) - 1);
+                await supabaseClient.from('annunci').update({ preferiti: preferitiAttuali }).eq('id', idAnnuncio);
+            }
+            await aggiornaTuttiIContatoriProfilo();
+            mostraPreferiti();
+        }
+
+        async function mostraMieiAnnunci() {
+            document.getElementById('tab-miei').className = "font-bold text-emerald-600 border-b-2 border-emerald-600 pb-1";
+            document.getElementById('tab-donati').className = "font-bold text-slate-400 pb-1";
+            document.getElementById('tab-pref').className = "font-bold text-slate-400 pb-1";
+            document.getElementById('tab-msg').className = "font-bold text-slate-400 pb-1";
+            
+            const contenitore = document.getElementById('profilo-contenuto-dinamico');
+            contenitore.className = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4";
+            contenitore.innerHTML = '<p class="text-slate-400 text-sm">Caricamento...</p>';
+
+            const { data, error } = await supabaseClient.from('annunci').select('*').eq('user_id', utenteCorrente.id).eq('stato', 'disponibile').order('id', { ascending: false });
+            const conteggioMiei = data ? data.length : 0;
+            document.getElementById('tab-miei').textContent = `I miei annunci (${conteggioMiei})`;
+
+            if (error || !data || data.length === 0) {
+                contenitore.innerHTML = '<p class="text-slate-500 col-span-2 text-center py-6">Non hai annunci attivi al momento.</p>';
+                return;
+            }
+
+            contenitore.innerHTML = '';
+            data.forEach(annuncio => {
+                const fotoPrincipale = annuncio.foto_url || (annuncio.foto_urls && annuncio.foto_urls[0]) || '';
+                const anteprimaFoto = fotoPrincipale ? `<img src="${fotoPrincipale}" class="w-full h-28 object-cover rounded-lg mb-2">` : '';
+
+                contenitore.innerHTML += `
+                    <div class="bg-white p-3 rounded-xl border border-slate-200 flex flex-col justify-between hover:border-emerald-500 transition cursor-pointer" onclick='mostraDettaglio(${JSON.stringify(annuncio)})'>
+                        <div>
+                            ${anteprimaFoto}
+                            <span class="text-[9px] font-semibold px-2 py-0.5 rounded-full ${annuncio.tipo === 'regalo' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${annuncio.tipo === 'regalo' ? 'In Regalo' : 'Cercato'}</span>
+                            <h4 class="font-bold text-slate-900 text-sm mt-1.5 line-clamp-1">${annuncio.titolo}</h4>
+                            <p class="text-[11px] text-slate-500 mt-0.5">📍 ${annuncio.zona} • ❤️ (${annuncio.preferiti || 0})</p>
+                        </div>
+                        <div class="mt-3 pt-2 border-t border-slate-100 flex justify-between items-center">
+                            <span class="text-[11px] text-emerald-600 font-medium hover:underline">Vedi dettagli</span>
+                            <button onclick="event.stopPropagation(); eliminaMioAnnuncio(${annuncio.id})" class="bg-rose-50 text-rose-600 px-2.5 py-1 rounded-lg text-[11px] font-semibold hover:bg-rose-100 transition">Elimina</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        async function mostraDonatiProfilo() {
+            document.getElementById('tab-donati').className = "font-bold text-emerald-600 border-b-2 border-emerald-600 pb-1";
+            document.getElementById('tab-miei').className = "font-bold text-slate-400 pb-1";
+            document.getElementById('tab-pref').className = "font-bold text-slate-400 pb-1";
+            document.getElementById('tab-msg').className = "font-bold text-slate-400 pb-1";
+
+            const contenitore = document.getElementById('profilo-contenuto-dinamico');
+            contenitore.className = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4";
+            contenitore.innerHTML = '<p class="text-slate-400 text-sm">Caricamento annunci donati...</p>';
+
+            const { data, error } = await supabaseClient.from('annunci').select('*').eq('user_id', utenteCorrente.id).eq('stato', 'donato').order('id', { ascending: false });
+            const conteggioDonati = data ? data.length : 0;
+            document.getElementById('tab-donati').textContent = `🎉 Annunci donati (${conteggioDonati})`;
+
+            if (error || !data || data.length === 0) {
+                contenitore.innerHTML = '<p class="text-slate-500 col-span-2 text-center py-6">Non hai ancora segnato alcun oggetto come donato.</p>';
+                return;
+            }
+
+            contenitore.innerHTML = '';
+            data.forEach(annuncio => {
+                const fotoPrincipale = annuncio.foto_url || (annuncio.foto_urls && annuncio.foto_urls[0]) || '';
+                const anteprimaFoto = fotoPrincipale ? `<img src="${fotoPrincipale}" class="w-full h-28 object-cover rounded-lg mb-2 opacity-70 grayscale">` : '';
+
+                contenitore.innerHTML += `
+                    <div class="bg-white p-3 rounded-xl border border-slate-200 flex flex-col justify-between hover:border-emerald-500 transition cursor-pointer" onclick='mostraDettaglio(${JSON.stringify(annuncio)})'>
+                        <div>
+                            ${anteprimaFoto}
+                            <span class="bg-emerald-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">Donato</span>
+                            <h4 class="font-bold text-slate-900 text-sm mt-1.5 line-clamp-1">${annuncio.titolo}</h4>
+                            <p class="text-[11px] text-slate-500 mt-0.5">📍 ${annuncio.zona}</p>
+                        </div>
+                        <div class="mt-3 pt-2 border-t border-slate-100 flex justify-between items-center">
+                            <span class="text-[11px] text-emerald-600 font-medium hover:underline">Vedi dettagli</span>
+                            <button onclick="event.stopPropagation(); eliminaMioAnnuncio(${annuncio.id})" class="bg-rose-50 text-rose-600 px-2.5 py-1 rounded-lg text-[11px] font-semibold hover:bg-rose-100 transition">Elimina</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        async function eliminaMioAnnuncio(id) {
+            if (confirm("Vuoi davvero eliminare definitivamente questo annuncio?")) {
+                await supabaseClient.from('annunci').delete().eq('id', id);
+                await aggiornaTuttiIContatoriProfilo();
+                mostraMieiAnnunci();
+                mostraToast("Annuncio eliminato", "info");
+            }
+        }
+
+        let realtimeChannelInbox = null;
+
+        async function caricaTabellaInbox() {
+            const contenitoreMsg = document.getElementById('profilo-contenuto-dinamico');
+            if (!contenitoreMsg || !utenteCorrente) return;
+
+            const mioEmail = utenteCorrente.email;
+            const mioNome = mioEmail.split('@')[0];
+
+            const { data: tuttiIMessaggiDB, error } = await supabaseClient
+                .from('messaggi')
+                .select('*')
+                .order('creato_il', { ascending: false });
+
+            if (error || !tuttiIMessaggiDB || tuttiIMessaggiDB.length === 0) {
+                contenitoreMsg.innerHTML = '<p class="text-slate-500 text-center py-6">Nessun messaggio o chat attiva al momento.</p>';
+                return;
+            }
+
+            const { data: mieiAnnunci } = await supabaseClient
+                .from('annunci')
+                .select('id')
+                .eq('user_id', utenteCorrente.id);
+            const idsMieiAnnunci = mieiAnnunci ? mieiAnnunci.map(a => a.id) : [];
+
+            const messaggiPertinenti = tuttiIMessaggiDB.filter(msg => {
+                const eMioAnnuncio = idsMieiAnnunci.includes(msg.annuncio_id);
+                const sonoAutore = msg.autore === mioNome;
+                return eMioAnnuncio || sonoAutore || true; 
+            });
+
+            if (messaggiPertinenti.length === 0) {
+                contenitoreMsg.innerHTML = '<p class="text-slate-500 text-center py-6">Nessun messaggio o chat attiva al momento.</p>';
+                return;
+            }
+
+            const annuncioIdsCoinvolti = [...new Set(messaggiPertinenti.map(m => m.annuncio_id))];
+
+            const { data: annunciChatData } = await supabaseClient
+                .from('annunci')
+                .select('id, titolo')
+                .in('id', annuncioIdsCoinvolti);
+
+            const chatPerAnnuncio = {};
+            messaggiPertinenti.forEach(msg => {
+                if (!chatPerAnnuncio[msg.annuncio_id]) {
+                    const annObj = annunciChatData ? annunciChatData.find(a => a.id === msg.annuncio_id) : null;
+                    chatPerAnnuncio[msg.annuncio_id] = {
+                        titolo: annObj ? annObj.titolo : 'Annuncio',
+                        ultimoMsg: msg.testo,
+                        ultimoAutore: msg.autore,
+                        data: msg.creato_il,
+                        haNonLetti: false
+                    };
+                }
+                if (msg.letto === false && msg.autore !== mioNome) {
+                    chatPerAnnuncio[msg.annuncio_id].haNonLetti = true;
+                }
+            });
+
+            contenitoreMsg.innerHTML = '';
+            Object.keys(chatPerAnnuncio).forEach(annuncioId => {
+                const chat = chatPerAnnuncio[annuncioId];
+                const dataFormattata = new Date(chat.data).toLocaleString();
+                const badgeNotifica = chat.haNonLetti ? `<span class="bg-rose-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full ml-2">Nuovo</span>` : '';
+                const tipoInvioRicezione = chat.ultimoAutore === mioNome ? '📤 Inviato' : '📥 Ricevuto';
+
+                contenitoreMsg.innerHTML += `
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-emerald-500 transition cursor-pointer" onclick="apriChatCompleta(${annuncioId}, '${chat.titolo.replace(/'/g, "\\'")}')">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-xs font-bold text-emerald-600 uppercase">${chat.titolo}</span> ${badgeNotifica}
+                                <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">${tipoInvioRicezione} da ${chat.ultimoAutore}</span>
+                            </div>
+                            <p class="text-sm text-slate-700 italic">"${chat.ultimoMsg}"</p>
+                            <span class="text-[10px] text-slate-400 mt-1 block">${dataFormattata}</span>
+                        </div>
+                        <span class="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap">Apri Chat 💬</span>
+                    </div>
+                `;
+            });
+        }
+
+        // Funzione unica e ripulita per mostrare i messaggi nel profilo (senza doppioni)
+        async function mostraMessaggiProfilo() {
+            document.getElementById('tab-msg').className = "font-bold text-emerald-600 border-b-2 border-emerald-600 pb-1";
+            document.getElementById('tab-miei').className = "font-bold text-slate-400 pb-1";
+            document.getElementById('tab-donati').className = "font-bold text-slate-400 pb-1";
+            document.getElementById('tab-pref').className = "font-bold text-slate-400 pb-1";
+            document.getElementById('tab-bloccati').className = "font-bold text-slate-400 pb-1";
+
+            const contenitoreMsg = document.getElementById('profilo-contenuto-dinamico');
+            if (!contenitoreMsg) return;
+
+            contenitoreMsg.className = "space-y-3";
+            contenitoreMsg.innerHTML = '<p class="text-slate-400 text-sm">Caricamento messaggi...</p>';
+
+            await caricaTabellaInbox();
+
+            if (realtimeChannelInbox) {
+                await supabaseClient.removeChannel(realtimeChannelInbox);
+                realtimeChannelInbox = null;
+            }
+
+            realtimeChannelInbox = supabaseClient
+                .channel(`inbox_profilo_${Date.now()}`)
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'messaggi' },
+                    () => {
+                        caricaTabellaInbox();
+                        aggiornaTuttiIContatoriProfilo();
+                    }
+                )
+                .subscribe();
+        }
+
+        function apriModaleAuth() { 
+            tornaAlLoginStandard();
+            document.getElementById('modale-auth').classList.remove('hidden'); 
+        }
+        function chiudiModaleAuth() { document.getElementById('modale-auth').classList.add('hidden'); }
+
+        async function gestisciRegistrazione() {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
+            if (!email || !password) { mostraToast("Inserisci email e password!", "info"); return; }
+
+            const { data, error } = await supabaseClient.auth.signUp({ email, password });
+            if (error) { mostraToast("Errore: " + error.message, "info"); } 
+            else { 
+                if (data.user) { await supabaseClient.from('profili').upsert([{ id: data.user.id, email: data.user.email }]); }
+                mostraToast("Registrazione completata!", "successo"); chiudiModaleAuth(); verificaSessione(); 
+            }
+        }
+
+        async function gestisciLogin() {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
+            if (!email || !password) { mostraToast("Inserisci email e password!", "info"); return; }
+
+            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) { mostraToast("Errore: " + error.message, "info"); } 
+            else { mostraToast("Login effettuato con successo! 👋", "successo"); chiudiModaleAuth(); verificaSessione(); }
+        }
+
+        async function eseguiLogout() {
+            await supabaseClient.auth.signOut();
+            utenteCorrente = null;
+            tornaAllaBacheca();
+            aggiornaNavbarAuth();
+            mostraToast("Disconnessione avvenuta.", "info");
+        }
+
+        function aggiornaNavbarAuth() {
+            const container = document.getElementById('auth-menu-container');
+            if (utenteCorrente) {
+                container.innerHTML = `<button onclick="apriProfilo()" class="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 transition">👤 Mio Profilo</button>`;
+            } else {
+                container.innerHTML = `<button onclick="apriModaleAuth()" class="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition">Accedi / Registrati</button>`;
+            }
+        }
+
+        function cercaSuggerimentiZona(testo, containerId) {
+            const container = document.getElementById(containerId);
+            clearTimeout(timeoutAutocomplete);
+            if (!testo || testo.trim().length < 2) { container.classList.add('hidden'); container.innerHTML = ''; return; }
+
+            timeoutAutocomplete = setTimeout(async () => {
+                try {
+                    const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=it&q=${encodeURIComponent(testo)}&addressdetails=1&accept-language=it&limit=5`;
+                    const response = await fetch(url);
+                    const results = await response.json();
+                    container.innerHTML = '';
+                    if (results.length === 0) { container.classList.add('hidden'); return; }
+
+                    const opzioniTrovate = new Set();
+                    results.forEach(place => {
+                        const addr = place.address || {};
+                        const comune = addr.city || addr.town || addr.village;
+                        const provincia = addr.county || addr.province;
+                        const regione = addr.state;
+                        if (comune) opzioniTrovate.add(comune);
+                        if (provincia) opzioniTrovate.add(provincia.includes('Provincia') ? provincia : `Provincia di ${provincia}`);
+                        if (regione) opzioniTrovate.add(regione);
+                    });
+
+                    opzioniTrovate.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = "px-4 py-2 hover:bg-emerald-50 cursor-pointer border-b border-slate-100 text-xs font-semibold text-slate-700";
+                        div.innerHTML = `📍 ${item}`;
+                        div.onclick = () => {
+                            document.getElementById(containerId === 'lista-suggerimenti-ricerca' ? 'input-zona' : 'nuovo-zona').value = item;
+                            container.classList.add('hidden');
+                        };
+                        container.appendChild(div);
+                    });
+                    container.classList.add('hidden');
+                    container.classList.remove('hidden');
+                } catch (e) { container.classList.add('hidden'); }
+            }, 300);
+        }
+
+        verificaSessione();
+    </script>
+</body>
+</html>
